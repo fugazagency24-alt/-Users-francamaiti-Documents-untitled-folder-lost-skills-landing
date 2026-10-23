@@ -4,6 +4,8 @@
 
 `PUT /v1/profile` valida y persiste la configuración del único negocio. `POST /v1/drafts` combina perfil → shared → overrides de cada creativo. El borrador contiene una instantánea inmutable y SHA-256 de su plan. Cambiar el perfil no altera borradores existentes.
 
+`POST /v1/drafts` acepta `Idempotency-Key`: el navegador genera una clave por intento del usuario y la conserva hasta tener respuesta. Doble clic, recarga o timeout devuelven el mismo borrador, y como cada borrador produce un solo trabajo, no se duplican campañas.
+
 `POST /v1/preview` hace la misma planificación sin guardar ni contactar Meta. No equivale a `validate_only` remoto ni valida permisos reales. `POST /v1/drafts/from-link` acepta una imagen/video directo o descarga un manifiesto HTTPS de hasta 256 KiB, sujeto a la allowlist.
 
 ## Publicación
@@ -36,6 +38,12 @@ No se promete exactly-once frente a Meta: si un POST creó algo y su respuesta s
 | NEEDS_RECONCILIATION | Creación incierta, interrupción o pausa compensatoria no confirmada. |
 | STOPPED_PAUSED | Se frenó el trabajo o se pausaron los padres conocidos. Si faltan objetos no se puede activar. |
 | PAUSE_INCOMPLETE | Alguna pausa no fue confirmada; consultar Meta y volver a pausar. |
+
+Estado remoto (`/remote`), por anuncio: PROCESANDO, EN_REVISION, RECHAZADO (con `ad_review_feedback`), CON_PROBLEMAS (`issues_info`), FALTA_MEDIO_DE_PAGO, ACTIVO, PAUSADO. `delivering=true` solo si Meta informa impresiones; ACTIVO no implica entrega.
+
+Una pausa manual también **retiene la activación automática**: si el borrador pedía ACTIVE y se pausó a mitad de camino, `/retry` reanuda la creación de lo que falta y deja todo pausado. Activar requiere `/activate` explícito.
+
+Videos sin portada propia: después de procesarse, se toma la miniatura preferida que genera Meta (`/{video_id}/thumbnails`) y se envía como `video_data.image_url`. Si Meta no generó ninguna, el paso falla con un pedido de portada JPG/PNG.
 
 Una pausa durante otra operación queda encolada y se procesa al terminar la llamada en curso; no es instantánea. Para activar una estructura pausada, `/activate` exige el hash del plan y que todos sus pasos hayan terminado. No crea otra estructura.
 

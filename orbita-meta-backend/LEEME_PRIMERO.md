@@ -22,6 +22,10 @@ El enlace visible tiene tres opciones: automático, personalizado o sin personal
 
 ## Estado de esta entrega
 
+**v1.1 (23/10/2026):** auditoría y correcciones antes del uso real; ver `CAMBIOS.md`. La más importante: Meta exige `advantage_audience` al crear conjuntos y el ZIP no lo enviaba. 36 pruebas en simulación; todavía sin conexión real con Meta ni integración en Orbita (ver `docs/PRUEBAS.md`).
+
+Texto original de la entrega v1.0:
+
 Código implementado y probado localmente con Meta simulada. El adaptador HTTP real está incluido, pero **no se conectó ninguna cuenta, no se crearon campañas reales y no se verificó entrega publicitaria real**. Los permisos, límites de cuenta, formatos y aprobación final deben comprobarse con tu cuenta durante la integración.
 
 Es un servicio interno para **un negocio / perfil por instancia**, con SQLite y un worker. No es un SaaS multicliente, ni un servidor para exponer directamente a Internet. Orbita debe aportar autenticación de usuarios, autorización, pantalla y despliegue. Si hay varios negocios, aislar servicio/base/token por negocio o implementar aislamiento antes de habilitarlos.

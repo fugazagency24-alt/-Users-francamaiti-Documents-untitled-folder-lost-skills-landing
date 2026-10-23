@@ -1,4 +1,5 @@
 import base64
+import re
 import threading
 import time
 from . import assets, validation as v
@@ -9,6 +10,13 @@ from .store import Store
 
 class Pausing(Exception):
     pass
+
+
+PREVIEW_FORMATS = ("DESKTOP_FEED_STANDARD", "MOBILE_FEED_STANDARD", "INSTAGRAM_STANDARD", "INSTAGRAM_STORY", "INSTAGRAM_REELS", "FACEBOOK_REELS_MOBILE")
+# effective_status de Meta -> fase legible. ACTIVO no implica entrega: eso lo dicen las impresiones.
+PHASES = {"ACTIVE": "ACTIVO", "PREAPPROVED": "ACTIVO", "PENDING_REVIEW": "EN_REVISION", "IN_PROCESS": "PROCESANDO",
+          "DISAPPROVED": "RECHAZADO", "WITH_ISSUES": "CON_PROBLEMAS", "PENDING_BILLING_INFO": "FALTA_MEDIO_DE_PAGO",
+          "PAUSED": "PAUSADO", "CAMPAIGN_PAUSED": "PAUSADO", "ADSET_PAUSED": "PAUSADO", "ARCHIVED": "ARCHIVADO", "DELETED": "ELIMINADO"}
 
 
 def resolve(value, results):
@@ -50,10 +58,12 @@ class Service:
         return {"mode": "live", "connected": True, "account": account, "page": page,
                 "note": "Lectura verificada; los permisos de creación y la compatibilidad final los valida Meta al publicar"}
 
-    def draft(self, body):
-        return self.store.draft(plan(body, self.store.profile()))
+    def draft(self, body, idem=None):
+        if idem:
+            v.text(idem, "Idempotency-Key", 128)
+        return self.store.draft(plan(body, self.store.profile()), idem)
 
-    def from_link(self, body):
+    def from_link(self, body, idem=None):
         v.obj(body, {"source_url", "source_type", "name", "structure", "thumbnail_url", "shared", "daily_budget_minor", "bid_cap_minor", "target_status"}, ("source_url", "source_type"))
         v.https(body["source_url"])
         v.require(body["source_type"] in ("image", "video", "manifest"), "source_type: image, video o manifest")
@@ -68,7 +78,7 @@ class Service:
             raw = {k: val for k, val in body.items() if k in v.REQUEST_FIELDS}
             raw.setdefault("structure", "ABO_1_1_1")
             raw["media"] = [media]
-        return self.draft(raw)
+        return self.draft(raw, idem)
 
     def publish(self, ident, body, idem):
         self.live_guard()
@@ -99,7 +109,7 @@ class Service:
                 data = assets.fetch(body["url"], self.c.asset_hosts) if self.c.mode == "live" else body["url"].encode()
                 body = {"bytes": base64.b64encode(data).decode()}
             if kind == "video" and self.c.mode == "live":
-                assets.resolve_public(body["file_url"], self.c.asset_hosts)
+                assets.probe(body["file_url"], self.c.asset_hosts, "video")
             if "name" in body:
                 body["name"] += f" [orbita:{ident[:12]}:{key}]"
         except v.Problem as e:
@@ -122,6 +132,14 @@ class Service:
                     raise v.Problem("Meta no pudo procesar el video", 422, "VIDEO_FAILED")
                 self.stop.wait(2)
             raise v.Problem("Video aún procesándose; reintentar conserva video_id", 409, "VIDEO_PROCESSING")
+        if kind == "video_thumbnail":
+            data = self.meta.call("GET", f"{path}/thumbnails", {"fields": "uri,is_preferred"}).get("data") or []
+            chosen = next((t for t in data if t.get("is_preferred")), data[0] if data else None)
+            if not chosen or not str(chosen.get("uri", "")).startswith("https://"):
+                raise v.Problem("Meta no generó una portada para el video; agregá una imagen de portada JPG/PNG", 422, "VIDEO_THUMBNAIL_MISSING")
+            result = {"url": chosen["uri"]}
+            self.store.step(ident, key, "DONE", result)
+            return result
         self.store.step(ident, key, "IN_FLIGHT")
         try:
             response = self.meta.call("POST", path, body)
@@ -161,6 +179,9 @@ class Service:
     def run(self, ident):
         with self.execution_lock:
             job = self.store.job(ident)
+            if job["state"] != "RUNNING":
+                # Una pausa pudo resolverse entre claim() y este lock; no ejecutar sobre un trabajo ya detenido.
+                return
             p = self.store.get_draft(job["draft_id"])
             if job["mode"] != self.c.mode:
                 self.store.state(ident, "FAILED", "Modo diferente al original; no mezclar mock y live")
@@ -173,7 +194,7 @@ class Service:
                 for op in p["operations"]:
                     self.check_pause(ident)
                     results[op["key"]] = self.execute_step(job, op, results)
-                activate = bool(job["activate_requested"]) or p["request"]["target_status"] == "ACTIVE"
+                activate = bool(job["activate_requested"]) or (p["request"]["target_status"] == "ACTIVE" and not job["hold_paused"])
                 if activate:
                     # Parents last. All children exist before any campaign can spend.
                     # Status writes are naturally idempotent; replay all on retry.
@@ -283,22 +304,119 @@ class Service:
         finally:
             self.execution_lock.release()
 
-    def remote(self, ident, action):
+    def remote(self, ident, action, ad_format="DESKTOP_FEED_STANDARD"):
         job = self.store.job(ident)
         v.require(job["mode"] == self.c.mode, "Modo incompatible")
+        v.require(ad_format in PREVIEW_FORMATS, "Formato de preview no admitido")
         p = self.store.get_draft(job["draft_id"])
         results = self.results(ident)
         out = []
         for op in p["operations"]:
             if op["key"] not in results:
                 continue
+            remote_id = results[op["key"]]["id"] if "id" in results[op["key"]] else None
             if action == "status" and op["kind"] in ("campaign", "adset", "ad"):
-                data = self.meta.call("GET", results[op["key"]]["id"], {"fields": "id,name,status,effective_status"})
+                fields = "id,name,status,effective_status,issues_info" + (",ad_review_feedback" if op["kind"] == "ad" else "")
+                data = self.meta.call("GET", remote_id, {"fields": fields})
+                data["phase"] = PHASES.get(data.get("effective_status"), "DESCONOCIDO")
+                if op["kind"] == "campaign":
+                    life = self.meta.call("GET", remote_id + "/insights", {"fields": "impressions,spend", "date_preset": "maximum"}).get("data") or []
+                    data["lifetime_impressions"] = sum(int(x.get("impressions") or 0) for x in life)
             elif action == "insights" and op["kind"] == "campaign":
-                data = self.meta.call("GET", results[op["key"]]["id"] + "/insights", {"fields": "campaign_id,impressions,clicks,spend,actions", "date_preset": "today"})
+                data = self.meta.call("GET", remote_id + "/insights", {"fields": "campaign_id,impressions,clicks,spend,actions", "date_preset": "today"})
             elif action == "previews" and op["kind"] == "ad":
-                data = self.meta.call("GET", results[op["key"]]["id"] + "/previews", {"ad_format": "DESKTOP_FEED_STANDARD"})
+                data = self.meta.call("GET", remote_id + "/previews", {"ad_format": ad_format})
             else:
                 continue
-            out.append({"step": op["key"], "data": data})
-        return {"mode": self.c.mode, "job_id": ident, "results": out}
+            out.append({"step": op["key"], "kind": op["kind"], "data": data})
+        response = {"mode": self.c.mode, "job_id": ident, "results": out}
+        if action == "status":
+            ads = [x["data"]["phase"] for x in out if x["kind"] == "ad"]
+            response["summary"] = {"local_state": job["state"],
+                                   "ads_by_phase": {ph: ads.count(ph) for ph in dict.fromkeys(ads)},
+                                   "delivering": any(x["data"].get("lifetime_impressions", 0) > 0 for x in out if x["kind"] == "campaign"),
+                                   "note": "ENTREGANDO solo si Meta informa impresiones; ACTIVO no implica entrega." if self.c.mode == "live"
+                                           else "Simulación: ningún objeto existe en Meta."}
+        return response
+
+    def list_jobs(self, limit=50):
+        return {"mode": self.c.mode, "jobs": self.store.list_jobs(limit)}
+
+    def update_defaults(self, body):
+        """Guarda defaults reutilizables (copy, destino, enlace visible, UTM) sin tocar cuenta ni presupuesto."""
+        p = self.store.profile()
+        p["defaults"] = {**p["defaults"], **v.copy_fields(body)}
+        return self.store.save_profile(v.profile(p))
+
+    def check_asset(self, body):
+        v.obj(body, {"url", "kind"}, ("url", "kind"))
+        v.require(body["kind"] in ("image", "video", "thumbnail"), "kind: image, video o thumbnail")
+        return assets.probe(body["url"], self.c.asset_hosts, "image" if body["kind"] == "thumbnail" else body["kind"])
+
+    def verify_setup(self):
+        """Comprobación guiada. Distingue lectura verificada de escritura validada por Meta (validate_only, sin crear nada)."""
+        p = self.store.profile()
+        if self.c.mode == "mock":
+            return {"mode": "mock", "simulated": True, "read_verified": False, "write_validated": False,
+                    "note": "Modo simulación: no hay conexión real con Meta."}
+        checks = {}
+        def check(name, fn):
+            try:
+                checks[name] = {"ok": True, **fn()}
+            except v.Problem as e:
+                checks[name] = {"ok": False, "error": str(e)}
+        check("token", lambda: {"identity": self.meta.call("GET", "me", {"fields": "id,name"})})
+        def permissions():
+            data = self.meta.call("GET", "me/permissions", {}).get("data") or []
+            granted = sorted(x["permission"] for x in data if x.get("status") == "granted")
+            return {"granted": granted, "ads_management": "ads_management" in granted}
+        check("permissions", permissions)
+        def account():
+            a = self.meta.call("GET", p["account_id"], {"fields": "id,name,currency,account_status,timezone_name,disable_reason"})
+            v.require(a.get("currency") == p["currency"], f"La cuenta usa {a.get('currency')}; el perfil dice {p['currency']}")
+            v.require(a.get("account_status") == 1, f"La cuenta no está activa (account_status={a.get('account_status')})")
+            return {"name": a.get("name"), "currency": a.get("currency"), "timezone": a.get("timezone_name")}
+        check("account", account)
+        check("page", lambda: {"name": self.meta.call("GET", p["page_id"], {"fields": "id,name"}).get("name")})
+        if p.get("pixel_id"):
+            check("pixel", lambda: {"name": self.meta.call("GET", p["pixel_id"], {"fields": "id,name"}).get("name")})
+        if p.get("instagram_user_id"):
+            def instagram():
+                rows = self.meta.call("GET", p["account_id"] + "/connected_instagram_accounts", {"fields": "id,username", "limit": 100}).get("data") or []
+                match = next((x for x in rows if str(x.get("id")) == p["instagram_user_id"]), None)
+                v.require(match is not None, "La cuenta de Instagram no figura entre las conectadas a la cuenta publicitaria")
+                return {"name": match.get("username")}
+            check("instagram", instagram)
+        def write():
+            r = self.meta.call("POST", p["account_id"] + "/campaigns", {
+                "name": "Orbita validación sin crear", "objective": "OUTCOME_SALES" if p["objective"] == "SALES" else "OUTCOME_TRAFFIC",
+                "buying_type": "AUCTION", "status": "PAUSED", "special_ad_categories": [], "is_adset_budget_sharing_enabled": False,
+                "execution_options": ["validate_only"]})
+            v.require(r.get("success") is True, "Meta no confirmó la validación")
+            return {"method": "validate_only"}
+        check("write_campaign", write)
+        read_ok = all(checks[k]["ok"] for k in checks if k not in ("permissions", "write_campaign"))
+        return {"mode": "live", "read_verified": read_ok, "write_validated": checks["write_campaign"]["ok"],
+                "live_publish_enabled": self.c.live_enabled, "checks": checks,
+                "note": "write_validated prueba que Meta acepta crear campañas con este token sin crear nada. "
+                        "Página, creatividades y anuncios se comprueban recién con el ensayo real pausado."}
+
+    def discover(self, account_id=None):
+        """Lista activos visibles para el token, con nombres legibles. Cada sección informa su propio error de permisos."""
+        if account_id is not None:
+            v.require(isinstance(account_id, str) and bool(re.fullmatch(r"act_[0-9]{1,40}", account_id)), "account_id debe ser act_123...")
+        if self.c.mode == "mock":
+            return {"mode": "mock", "simulated": True, "note": "Modo simulación: sin activos reales."}
+        out = {"mode": "live"}
+        def section(name, path, fields):
+            try:
+                out[name] = {"ok": True, "items": self.meta.call("GET", path, {"fields": fields, "limit": 100}).get("data") or []}
+            except v.Problem as e:
+                out[name] = {"ok": False, "error": str(e), "items": []}
+        section("ad_accounts", "me/adaccounts", "id,name,currency,account_status,timezone_name")
+        section("pages", "me/accounts", "id,name")
+        if account_id:
+            section("promote_pages", account_id + "/promote_pages", "id,name")
+            section("pixels", account_id + "/adspixels", "id,name")
+            section("instagram_accounts", account_id + "/connected_instagram_accounts", "id,username")
+        return out

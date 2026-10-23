@@ -7,19 +7,25 @@ Base local: `http://127.0.0.1:8787`. Todas las rutas salvo `/health` requieren `
 | GET /health | Salud del proceso y modo; no verifica Meta. |
 | GET /v1/profile | Configuración guardada, sin secretos. |
 | PUT /v1/profile | Reemplazar perfil completo. Solo configuración administrativa. |
+| PUT /v1/profile/defaults | Guardar solo defaults de anuncio (copy, CTA, destino, enlace visible, UTM). No toca cuenta, presupuesto ni puja. |
 | GET /v1/connection | Verificar lectura de cuenta/página/píxel/Instagram configurados y moneda. |
+| POST /v1/setup/verify | Comprobación guiada: token, permisos, cuenta, página, píxel, Instagram con nombres; escritura con `validate_only` (no crea nada). |
+| GET /v1/setup/assets?account_id=act_… | Descubrir cuentas, páginas, píxeles e Instagram visibles para el token. Cada sección informa su error de permisos. |
+| POST /v1/assets/check | `{url, kind}`: confirma que el enlace es el archivo directo (formato, medidas) y no una carpeta o página. |
+| GET /v1/jobs?limit=N | Publicaciones recientes con estado y resumen. |
+| GET /v1/drafts?limit=N | Borradores recientes con su trabajo, si existe. |
 | POST /v1/preview | Planificar sin persistencia ni llamadas Meta. |
-| POST /v1/drafts | Guardar borrador y devolver draft_id, plan_hash, summary, operations, warnings. |
+| POST /v1/drafts | Guardar borrador y devolver draft_id, plan_hash, summary, operations, warnings. Header opcional `Idempotency-Key`: misma clave + mismo contenido = mismo borrador. |
 | POST /v1/drafts/from-link | Atajo para URL de archivo o manifiesto. |
 | GET /v1/drafts/{draft_id} | Recuperar el borrador congelado. |
 | POST /v1/drafts/{draft_id}/publish | Encolar; body plan_hash y header Idempotency-Key. |
 | GET /v1/jobs/{job_id} | Estado, pasos, resultados, último error y últimos 100 eventos. |
 | POST /v1/jobs/{job_id}/activate | Activar estructura ya completa; body plan_hash. |
 | POST /v1/jobs/{job_id}/pause | Pausar padres del trabajo; body vacío o `{}`. |
-| POST /v1/jobs/{job_id}/retry | Reencolar FAILED/NEEDS_RECONCILIATION ya resuelto; body `{}`. |
+| POST /v1/jobs/{job_id}/retry | Reencolar FAILED/NEEDS_RECONCILIATION ya resuelto, o reanudar STOPPED_PAUSED; body `{}`. Reanudar no activa: para eso, /activate. |
 | POST /v1/jobs/{job_id}/resolve | Resolver un paso UNCERTAIN; solo administrador. |
-| GET /v1/jobs/{job_id}/remote | status/effective_status actuales, por objeto conocido. |
-| GET /v1/jobs/{job_id}/previews | Previews DESKTOP_FEED_STANDARD de los anuncios creados. No garantiza todas las ubicaciones. |
+| GET /v1/jobs/{job_id}/remote | status/effective_status/issues por objeto, fase legible (EN_REVISION, RECHAZADO, ACTIVO, PAUSADO…) y `delivering` solo si Meta informa impresiones. |
+| GET /v1/jobs/{job_id}/previews?format=… | Previews por formato (DESKTOP_FEED_STANDARD, MOBILE_FEED_STANDARD, INSTAGRAM_STANDARD, INSTAGRAM_STORY, INSTAGRAM_REELS, FACEBOOK_REELS_MOBILE). |
 | GET /v1/jobs/{job_id}/insights | Métricas de hoy a nivel campaña: impressions, clicks, spend, actions. |
 
 El cliente debe guardar los IDs. Un trabajo repetido devuelve el mismo job. La misma Idempotency-Key con otro borrador devuelve conflicto. Un borrador solo puede producir un trabajo, incluso si cambia la clave. No hay endpoint público de búsqueda global/listado: Orbita mantiene su lista de trabajos y controla su acceso.
@@ -30,7 +36,13 @@ Ver `examples/profile.json`. `account_id` usa prefijo `act_`; los otros IDs son 
 
 Todo importe es entero en unidades menores: **100000 ARS = $1.000 ARS; 1500 USD = US$15**. La moneda proviene de la cuenta, no de la ubicación del usuario. No se convierten monedas. `daily_budget_minor` es por adset; `max_batch_daily_budget_minor` limita la suma del lote; `bid_cap_minor` es la puja máxima de Bid Cap, no un CPA garantizado.
 
-`defaults.primary_text` y `defaults.destination_url` son obligatorios. Título y descripción pueden ser vacíos. CTA por defecto LEARN_MORE. No hay auto-copy. Para borrar un enlace visible heredado usar `display_url_mode: "AUTO"` o `"OMIT_CUSTOM"` junto con `display_url: ""`.
+`defaults.primary_text` y `defaults.destination_url` son obligatorios. Título y descripción pueden ser vacíos. CTA por defecto LEARN_MORE. No hay auto-copy.
+
+Enlace visible (`display_url_mode`): `AUTO` envía el dominio limpio del destino (`https://dominio`); `CUSTOM` envía `display_url`, que debe ser del mismo dominio (www. opcional; si se pega sin `https://` se agrega); `OMIT_CUSTOM` no envía nada y Meta usa su valor por defecto. Imagen: `link_data.caption`. Video: `call_to_action.value.link_caption`. Meta no usa ese campo en Instagram y decide la presentación final.
+
+UTM: se aceptan `?` inicial, una URL completa (se toma su query) y macros codificadas `%7B%7B…%7D%7D`; se guardan normalizadas y literales. Si la URL de destino ya trae una clave del UTM, el error nombra la clave a quitar.
+
+`advantage_audience` (opcional, default `false`): se envía siempre `targeting.targeting_automation.advantage_audience` porque Meta lo exige al crear conjuntos. `true` requiere age_min 18–25 y age_max 65.
 
 ## Crear un borrador desde enlaces
 

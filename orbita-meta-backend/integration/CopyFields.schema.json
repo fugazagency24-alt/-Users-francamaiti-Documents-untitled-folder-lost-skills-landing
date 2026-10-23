@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "primary_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 5000
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "cta": {
+      "type": "string",
+      "enum": [
+        "LEARN_MORE",
+        "SHOP_NOW",
+        "SIGN_UP",
+        "BOOK_TRAVEL",
+        "CONTACT_US",
+        "DOWNLOAD",
+        "GET_QUOTE",
+        "SUBSCRIBE",
+        "APPLY_NOW"
+      ]
+    },
+    "destination_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "maxLength": 4096,
+      "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
+    },
+    "display_url_mode": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "CUSTOM",
+        "OMIT_CUSTOM"
+      ],
+      "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
+    },
+    "display_url": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "utm_template": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
+    }
+  },
+  "required": []
+}

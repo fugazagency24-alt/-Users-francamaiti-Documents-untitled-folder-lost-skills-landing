@@ -1,6 +1,21 @@
 # Fuentes técnicas y decisiones
 
-Consulta: 22 de octubre de 2026. Se usaron documentación y SDK oficiales de Meta como referencia; no se incluye código del SDK ni se instala como dependencia. Algunas páginas HTML oficiales devolvieron 429 al abrirlas; se contrastaron campos con el código público oficial y los resultados indexados. No se verificó una llamada autenticada a Meta.
+## Revisión del 23/10/2026 (integración)
+
+Desde el entorno de trabajo, `developers.facebook.com` y `graph.facebook.com` estaban bloqueados por la política de red; las páginas oficiales se contrastaron mediante resultados de búsqueda que citan esa documentación. **No se hizo ninguna llamada autenticada a Meta.**
+
+| Tema | Fuente |
+|---|---|
+| v26.0 vigente y cambios del 27/10/2026 | https://developers.facebook.com/docs/graph-api/changelog/version26.0/ · https://developers.facebook.com/documentation/ads-commerce/marketing-api/overview/versioning |
+| `is_adset_budget_sharing_enabled` obligatorio sin presupuesto de campaña (desde v24) | https://developers.facebook.com/blog/post/2025/10/08/introducing-graph-api-v24-and-marketing-api-v24/ · https://developers.facebook.com/documentation/ads-commerce/marketing-api/bidding/guides/adset-budget-sharing |
+| `targeting_automation.advantage_audience` explícito al crear conjuntos (desde v23) | https://developers.facebook.com/docs/marketing-api/audiences/reference/targeting-expansion/advantage-audience/ · https://developers.facebook.com/blog/post/2025/06/13/marketing-api-changes-to-advantage-plus-audience-behaviors/ |
+| Advantage+ unificado (v25) y advantage_state | https://developers.facebook.com/docs/marketing-api/advantage-campaigns |
+| `validate_only` | https://developers.facebook.com/documentation/ads-commerce/marketing-api/advantage-shopping-campaigns |
+| `instagram_user_id`, `connected_instagram_accounts` | https://developers.facebook.com/documentation/ads-commerce/instagram/ads-api/guides/use-posts-as-ads · https://developers.facebook.com/blog/post/2025/01/21/making-it-easier-to-build-integrations-across-the-instagram-api-and-marketing-api/ |
+| Video creative (`image_url`/`image_hash`, `link_description`, CTA) | https://developers.facebook.com/docs/marketing-api/reference/ad-creative-video-data |
+| Niveles de acceso | Fuentes de terceros coinciden en acceso estándar para cuentas propias; confirmar en el panel de la app. |
+
+## Revisión original (22/10/2026, ZIP)
 
 | Tema | Fuente primaria |
 |---|---|
@@ -9,14 +24,8 @@ Consulta: 22 de octubre de 2026. Se usaron documentación y SDK oficiales de Met
 | Creatividades | https://developers.facebook.com/documentation/ads-commerce/marketing-api/reference/ad-creative |
 | Link data y caption | https://developers.facebook.com/docs/marketing-api/reference/ad-creative-link-data/ |
 | CTA value y link_caption | https://developers.facebook.com/docs/marketing-api/reference/ad-creative-link-data-call-to-action-value/ |
-| Migración de identidad Instagram | https://developers.facebook.com/docs/graph-api/changelog/version22.0/ |
-| SDK oficial: create campaign/adset/image/video | https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/adaccount.py |
-| SDK oficial: estrategia de puja | https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/adset.py |
-| SDK oficial: story spec | https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/adcreativeobjectstoryspec.py |
-| SDK oficial: video data | https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/adcreativevideodata.py |
-| SDK oficial: link data | https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/adcreativelinkdata.py |
-| Colección oficial de Meta | https://www.postman.com/meta/facebook-marketing-api/overview |
+| SDK oficial (campos) | https://github.com/facebook/facebook-python-business-sdk |
 
-Decisiones propias del módulo: un negocio por instancia; máximo por lote; URLs visibles del mismo hostname exacto; solo adultos; solo JPG/PNG para imagen; fail-closed ante creación incierta; configuración vía token administrado; perfiles inmutables por borrador. No son afirmaciones de que Meta exija exactamente esas restricciones en todos los casos.
+## Decisiones propias del módulo
 
-Los campos y compatibilidades de una API pueden cambiar. Al integrar, validar el caso real con la versión y cuenta seleccionadas. La presencia de un campo en el SDK no garantiza que toda combinación de objetivo, placement, cuenta y creatividad lo acepte.
+Un negocio por instancia; máximo por lote; enlace visible del mismo dominio (www. opcional); solo adultos; imágenes JPG/PNG; fail-closed ante creación incierta; token administrado; borradores inmutables; `advantage_audience=0` por defecto para no cambiar la segmentación sin pedido. No son afirmaciones de que Meta exija exactamente esas restricciones.

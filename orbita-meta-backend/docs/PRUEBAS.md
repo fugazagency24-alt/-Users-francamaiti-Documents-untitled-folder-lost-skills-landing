@@ -1,29 +1,23 @@
-# Verificación de la entrega
+# Verificación
 
-Fecha: 22/10/2026. Python 3.12.14. No se usaron credenciales de Meta ni se realizaron publicaciones reales.
+## 23/10/2026 · integración v1.1 (Python 3.13)
 
-## Ejecutado
+`python -m unittest discover -v`: **36 pruebas aprobadas** (19 originales, una ajustada porque `?a=b` ahora se normaliza; 17 nuevas).
 
-`python -m unittest discover -v`: **19 pruebas aprobadas**.
+Nuevas coberturas: `advantage_audience` explícito y sus límites de edad; UTM pegado con `?`, URL completa o macros codificadas; error que nombra el parámetro repetido; enlace visible AUTO/CUSTOM/OMIT para imagen y video; video sin portada usando la miniatura de Meta; pausa entre `claim` y ejecución sin crear nada; pausa manual que retiene la activación hasta `/activate`; errores de Meta legibles sin tokens ni querystrings; enlaces de carpeta/página rechazados; detección HTML vs. MP4 y medidas de PNG; UTM predeterminado reutilizado con override explícito; fases remotas y listados; verificación guiada en modo live sin crear objetos (solo `validate_only`); moneda distinta informada; permisos de herramientas de IA aplicados en backend; idempotencia de borrador ante doble clic; rutas HTTP nuevas.
 
-Cobertura funcional: estructura Bid Cap 1:1:10; ABO por creativo y suma de presupuesto; copy/CTA/enlace/UTM; caption de video; rechazo de parámetros inválidos/duplicados; hash de borrador inmutable; idempotencia y conflictos; creación completa simulada; orden de activación; activación posterior sin duplicados; pausa; compensación de fallo de activación; reintento conocido conservando IDs; bloqueo de creación incierta; recuperación tras reinicio; video y portada; píxel requerido; bloqueo de modo live no habilitado; allowlist e IP privada; atajo de link; autenticación y flujo HTTP local.
+`python examples/run_mock_demo.py`: Bid Cap 1:1:10 (32 pasos), ABO ×3 (15), ABO video (7): SIMULATED.
 
-`python examples/run_mock_demo.py`: tres flujos completos simulados:
+Servicio real (`python -m orbita_ads`, modo mock) por HTTP: perfil → borrador Bid Cap → publicar dos veces con la misma clave → mismo trabajo → worker → SIMULATED → `/remote` con 10 anuncios PAUSADO.
 
-| Caso | Campañas | Adsets | Anuncios | Pasos | Estado |
-|---|---:|---:|---:|---:|---|
-| BID_CAP_1_1_10 | 1 | 1 | 10 | 32 | SIMULATED |
-| ABO con tres imágenes | 3 | 3 | 3 | 15 | SIMULATED |
-| ABO con video | 1 | 1 | 1 | 7 | SIMULATED |
+Migración: una base creada con la versión del ZIP abre con la v1.1, lista y pausa sus trabajos.
 
-`python -m compileall -q orbita_ads integration examples`: sintaxis Python correcta.
+## No verificado
 
-Contratos JSON generados desde `integration/build_contracts.py`. ZIP validado con comprobación CRC y exclusión de cachés, bases de datos y secretos reales.
+- **Nada contra Meta real**: la red del entorno bloquea `graph.facebook.com` y no hay token configurado.
+- **Integración en Orbita**: el código de Orbita no estuvo disponible.
+- Adaptador TypeScript sin compilar (no hay proyecto TS donde montarlo todavía). Docker no ejecutado.
 
-## No verificado en esta entrega
+## Aceptación pendiente con tu cuenta
 
-No se ejecutó la integración dentro del repositorio real de Orbita, porque no se proporcionó. No se ejecutó el contenedor Docker. No hubo compilador TypeScript disponible para comprobar el adaptador TS. No se conectó un modelo Claude ni se ejecutó un bucle real de herramientas de IA. No se validaron credenciales, permisos, aprobación publicitaria, formatos ni entrega con una cuenta real de Meta. Los mocks prueban el workflow local; no demuestran compatibilidad de todas las cuentas con los payloads.
-
-## Prueba de aceptación en la integración
-
-Configurar perfil real y token, verificar conexión, crear una estructura autorizada PAUSED, inspeccionar los objetos y previews en Meta, comprobar CTA/destino/UTM, luego activar con autorización de presupuesto. Revisar effective_status y confirmar entrega con métricas reales. Si Meta exige campos adicionales, implementarlos y repetir la prueba afectada antes de anunciar la función como operativa.
+`/v1/setup/verify` con `read_verified` y `write_validated` en true → ensayo real PAUSED → revisar objetos, CTA, destino, `url_tags`, enlace visible y previews en Meta → activar solo con instrucción de gasto.

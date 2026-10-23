@@ -27,6 +27,13 @@ class Store:
             CREATE TABLE IF NOT EXISTS events (
               seq INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL, at REAL NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL);
             """)
+            # Migración v2: una pausa manual retiene la activación automática hasta un /activate explícito.
+            if "hold_paused" not in {r[1] for r in db.execute("PRAGMA table_info(jobs)")}:
+                db.execute("ALTER TABLE jobs ADD COLUMN hold_paused INTEGER NOT NULL DEFAULT 0")
+            # Migración v2: clave idempotente opcional por borrador (doble clic, recarga o timeout del navegador).
+            if "idem" not in {r[1] for r in db.execute("PRAGMA table_info(drafts)")}:
+                db.execute("ALTER TABLE drafts ADD COLUMN idem TEXT")
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS drafts_idem ON drafts(idem) WHERE idem IS NOT NULL")
 
     @contextmanager
     def db(self):
@@ -50,10 +57,18 @@ class Store:
             db.execute("INSERT INTO settings VALUES ('profile',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (canonical(p),))
         return p
 
-    def draft(self, plan):
+    def draft(self, plan, idem=None):
         ident = uuid.uuid4().hex
         with self.db() as db:
-            db.execute("INSERT INTO drafts VALUES (?,?,?)", (ident, canonical(plan), time.time()))
+            db.execute("BEGIN IMMEDIATE")
+            if idem:
+                r = db.execute("SELECT id,plan FROM drafts WHERE idem=?", (idem,)).fetchone()
+                if r:
+                    old = json.loads(r["plan"])
+                    if old["plan_hash"] != plan["plan_hash"]:
+                        raise Problem("Idempotency-Key ya usada para otro borrador", 409)
+                    return {"draft_id": r["id"], **old}
+            db.execute("INSERT INTO drafts(id,plan,created,idem) VALUES (?,?,?,?)", (ident, canonical(plan), time.time(), idem or None))
         return {"draft_id": ident, **plan}
 
     def get_draft(self, ident):
@@ -123,8 +138,8 @@ class Store:
             row = db.execute("SELECT state FROM jobs WHERE id=?", (ident,)).fetchone()
             if not row:
                 raise Problem("Trabajo no encontrado", 404)
-            if row[0] not in ("FAILED", "NEEDS_RECONCILIATION"):
-                raise Problem("Solo se puede reintentar FAILED o NEEDS_RECONCILIATION", 409)
+            if row[0] not in ("FAILED", "NEEDS_RECONCILIATION", "STOPPED_PAUSED"):
+                raise Problem("Solo se puede reintentar o reanudar FAILED, NEEDS_RECONCILIATION o STOPPED_PAUSED", 409)
             if db.execute("SELECT 1 FROM steps WHERE job_id=? AND state IN ('UNCERTAIN','IN_FLIGHT')", (ident,)).fetchone():
                 raise Problem("Resolver los pasos inciertos antes de reintentar", 409, "RECONCILIATION_REQUIRED")
             db.execute("UPDATE jobs SET state='QUEUED',error=NULL,pause_requested=0,updated=? WHERE id=?", (time.time(), ident))
@@ -133,7 +148,7 @@ class Store:
     def request_pause(self, ident):
         self.job(ident)
         with self.db() as db:
-            db.execute("UPDATE jobs SET pause_requested=1 WHERE id=?", (ident,))
+            db.execute("UPDATE jobs SET pause_requested=1, hold_paused=1 WHERE id=?", (ident,))
 
     def clear_pause(self, ident):
         with self.db() as db:
@@ -148,8 +163,27 @@ class Store:
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
             r = db.execute("SELECT state,activate_requested FROM jobs WHERE id=?", (ident,)).fetchone()
+            if not r:
+                raise Problem("Trabajo no encontrado", 404)
             if r[0] in ("QUEUED", "RUNNING", "ACTIVATION_REQUESTED") and r[1]:
                 return
             if r[0] not in ("CREATED_PAUSED", "SIMULATED", "STOPPED_PAUSED", "ACTIVATION_REQUESTED"):
                 raise Problem("Estado no permite activar; completar/reconciliar el trabajo primero", 409)
-            db.execute("UPDATE jobs SET state='QUEUED',activate_requested=1,pause_requested=0,error=NULL,updated=? WHERE id=?", (time.time(), ident))
+            db.execute("UPDATE jobs SET state='QUEUED',activate_requested=1,pause_requested=0,hold_paused=0,error=NULL,updated=? WHERE id=?", (time.time(), ident))
+
+    def list_jobs(self, limit=50):
+        with self.db() as db:
+            rows = db.execute("SELECT j.id,j.draft_id,j.mode,j.state,j.error,j.created,j.updated,j.activate_requested,j.hold_paused,d.plan "
+                              "FROM jobs j JOIN drafts d ON d.id=j.draft_id ORDER BY j.created DESC LIMIT ?", (limit,)).fetchall()
+        out = []
+        for r in rows:
+            plan = json.loads(r["plan"])
+            out.append({**{k: r[k] for k in r.keys() if k != "plan"}, "plan_hash": plan["plan_hash"], "summary": plan["summary"]})
+        return out
+
+    def list_drafts(self, limit=50):
+        with self.db() as db:
+            rows = db.execute("SELECT d.id,d.plan,d.created,j.id AS job_id,j.state FROM drafts d LEFT JOIN jobs j ON j.draft_id=d.id "
+                              "ORDER BY d.created DESC LIMIT ?", (limit,)).fetchall()
+        return [{"draft_id": r["id"], "created": r["created"], "job_id": r["job_id"], "job_state": r["state"],
+                 "plan_hash": json.loads(r["plan"])["plan_hash"], "summary": json.loads(r["plan"])["summary"]} for r in rows]

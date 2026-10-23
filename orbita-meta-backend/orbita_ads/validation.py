@@ -52,7 +52,19 @@ def https(value, label="URL"):
 
 COPY_FIELDS = {"primary_text", "headline", "description", "cta", "destination_url", "display_url_mode", "display_url", "utm_template"}
 CTAS = {"LEARN_MORE", "SHOP_NOW", "SIGN_UP", "BOOK_TRAVEL", "CONTACT_US", "DOWNLOAD", "GET_QUOTE", "SUBSCRIBE", "APPLY_NOW"}
+DISPLAY_MODES = ("AUTO", "CUSTOM", "OMIT_CUSTOM")
 MACROS = {"campaign.id", "adset.id", "ad.id", "campaign.name", "adset.name", "ad.name", "placement", "site_source_name"}
+
+
+def normalize_utm(value):
+    """Acepta lo que la gente suele pegar: '?a=b', una URL completa o macros codificadas."""
+    if not isinstance(value, str):
+        return value
+    value = value.strip()
+    if re.match(r"https?://", value, re.I):
+        value = urlsplit(value).query
+    value = value.lstrip("?&")
+    return re.sub(r"%7B%7B", "{{", re.sub(r"%7D%7D", "}}", value, flags=re.I), flags=re.I)
 
 
 def utm(value):
@@ -69,9 +81,18 @@ def utm(value):
     return value
 
 
+def bare_host(url):
+    host = (urlsplit(url).hostname or "").lower()
+    return host[4:] if host.startswith("www.") else host
+
+
 def copy_fields(raw, complete=False):
     obj(raw, COPY_FIELDS, ("primary_text", "destination_url") if complete else ())
     d = copy.deepcopy(raw)
+    if "utm_template" in d:
+        d["utm_template"] = normalize_utm(d["utm_template"])
+    if isinstance(d.get("display_url"), str) and d["display_url"].strip() and "://" not in d["display_url"]:
+        d["display_url"] = "https://" + d["display_url"].strip()
     if complete:
         d = {"headline": "", "description": "", "cta": "LEARN_MORE", "display_url_mode": "AUTO",
              "display_url": "", "utm_template": "", **d}
@@ -83,7 +104,7 @@ def copy_fields(raw, complete=False):
     if "destination_url" in d:
         https(d["destination_url"], "destination_url")
     if "display_url_mode" in d:
-        require(d["display_url_mode"] in ("AUTO", "CUSTOM", "OMIT_CUSTOM"), "display_url_mode inválido; ocultar siempre no está garantizado por Meta")
+        require(d["display_url_mode"] in DISPLAY_MODES, "display_url_mode inválido; ocultar siempre no está garantizado por Meta")
     if "display_url" in d:
         text(d["display_url"], "display_url", 255, empty=True)
     if "utm_template" in d:
@@ -91,23 +112,24 @@ def copy_fields(raw, complete=False):
     if complete:
         if d["display_url_mode"] == "CUSTOM":
             https(d["display_url"], "display_url")
-            require(urlsplit(d["display_url"]).hostname == urlsplit(d["destination_url"]).hostname,
-                    "El enlace visible debe usar el mismo dominio exacto que el destino")
+            require(bare_host(d["display_url"]) == bare_host(d["destination_url"]),
+                    "El enlace visible debe usar el mismo dominio que el destino (www. opcional)")
         else:
             require(not d["display_url"], "Borrá display_url si el modo no es CUSTOM")
-        dest_keys = {k for k, _ in parse_qsl(urlsplit(d["destination_url"]).query)}
-        tag_keys = {k for k, _ in parse_qsl(d["utm_template"])}
-        require(not dest_keys.intersection(tag_keys), "Hay parámetros repetidos entre destination_url y UTM")
+        dest_keys = {k for k, _ in parse_qsl(urlsplit(d["destination_url"]).query, keep_blank_values=True)}
+        repeated = sorted(dest_keys.intersection(k for k, _ in parse_qsl(d["utm_template"], keep_blank_values=True)))
+        require(not repeated, "Parámetros repetidos entre la URL de destino y el UTM: " + ", ".join(repeated)
+                + ". Quitalos de la URL de destino; el UTM los agrega en url_tags.")
     return d
 
 
 PROFILE_FIELDS = {"account_id", "page_id", "instagram_user_id", "pixel_id", "currency", "countries", "age_min", "age_max",
-                  "objective", "daily_budget_minor", "max_batch_daily_budget_minor", "bid_cap_minor", "defaults"}
+                  "advantage_audience", "objective", "daily_budget_minor", "max_batch_daily_budget_minor", "bid_cap_minor", "defaults"}
 
 
 def profile(raw):
     obj(raw, PROFILE_FIELDS, ("account_id", "page_id", "currency", "countries", "objective", "daily_budget_minor", "max_batch_daily_budget_minor", "defaults"))
-    p = {"age_min": 18, "age_max": 65, **copy.deepcopy(raw)}
+    p = {"age_min": 18, "age_max": 65, "advantage_audience": False, **copy.deepcopy(raw)}
     require(isinstance(p["account_id"], str) and bool(re.fullmatch(r"act_[0-9]{1,40}", p["account_id"])), "account_id debe ser act_123...")
     for k in ("page_id", "instagram_user_id", "pixel_id"):
         if k in p:
@@ -117,6 +139,10 @@ def profile(raw):
     require(all(isinstance(c, str) and re.fullmatch(r"[A-Z]{2}", c) for c in p["countries"]), "countries: códigos ISO en mayúsculas")
     integer(p["age_min"], "age_min", 18, 65)
     integer(p["age_max"], "age_max", p["age_min"], 65)
+    require(type(p["advantage_audience"]) is bool, "advantage_audience: true o false")
+    # Meta: con Advantage+ audience, age_min solo 18-25 y age_max fijo en 65.
+    require(not p["advantage_audience"] or (p["age_min"] <= 25 and p["age_max"] == 65),
+            "Con advantage_audience=true Meta solo admite age_min 18-25 y age_max 65")
     require(p["objective"] in ("SALES", "TRAFFIC"), "objective: SALES o TRAFFIC, destino sitio web")
     require(p["objective"] != "SALES" or bool(p.get("pixel_id")), "SALES necesita pixel_id y evento PURCHASE configurado en Meta")
     for k in ("daily_budget_minor", "max_batch_daily_budget_minor", "bid_cap_minor"):
@@ -157,8 +183,9 @@ def request(raw, p):
         else:
             require(("url" in m) != ("video_id" in m), "Video: url o video_id, exactamente uno")
             require("image_hash" not in m, "Video: image_hash no válido")
-            require("thumbnail_url" in m, "Video requiere thumbnail_url JPG/PNG público")
-            https(m["thumbnail_url"], "thumbnail_url")
+            # Sin portada propia se usa la miniatura preferida que Meta genera al procesar el video.
+            if "thumbnail_url" in m:
+                https(m["thumbnail_url"], "thumbnail_url")
             if "video_id" in m:
                 ident(m["video_id"], "video_id")
         if "url" in m:

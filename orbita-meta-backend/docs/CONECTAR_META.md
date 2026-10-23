@@ -1,26 +1,43 @@
-# Conectar el negocio a Meta
+# Conectar tu negocio a Meta
 
-La conexión real no se hizo en esta entrega porque no se proporcionaron cuenta, token ni activos. El backend incluye un cliente HTTP real con versión Graph configurable; por defecto `v26.0`, identificada en documentación oficial consultada el 22/10/2026. Confirmar disponibilidad y cambios al desplegar.
+Camino: **API oficial de Marketing + token de usuario del sistema** de tu propio portfolio comercial, guardado solo en el servidor. No incluye OAuth: para un solo negocio propio no hace falta y evita una pantalla “Conectar con Meta” sin flujo real detrás. Si Orbita ya tiene OAuth de Meta, se reutiliza su almacenamiento seguro del token.
 
-## Configuración inicial
+## Qué está verificado (23/10/2026)
 
-1. En Meta for Developers, usar una app habilitada para Marketing API, vinculada al negocio cuando corresponda. Revisar el nivel de acceso y requisitos de revisión/verificación para ese caso de uso; los requisitos para activos propios y activos de terceros pueden diferir.
-2. Para automatización de tu propio negocio, configurar un usuario del sistema en el negocio y asignarle los activos necesarios, incluyendo la cuenta publicitaria y página. Proveer un token autorizado para la app y los permisos usados. Para escribir publicidad se necesita `ads_management`; para lecturas/reportes, conceder el alcance de lectura que corresponda al token y app. Lecturas de página/Instagram pueden exigir permisos y tareas adicionales. Validarlos en la documentación/panel de la app y con el token real, no asumir que un token con acceso a una cuenta tiene acceso a todos los activos.
-3. Guardar `META_ACCESS_TOKEN` en el secret manager del hosting. `META_APP_SECRET` habilita `appsecret_proof` HMAC en las llamadas. No enviar secretos al navegador, al chat, al ZIP ni al repositorio.
-4. Completar el perfil con cuenta (`act_...`), página, píxel para ventas, identidad Instagram si se usa, moneda real, países, presupuesto, máximo por lote, bid cap y defaults de anuncios/UTM. No copiar los IDs ficticios de examples.
-5. Configurar `ASSET_ALLOWED_HOSTS` con los dominios exactos de tu almacenamiento. Los links deben ser HTTPS públicos o firmados, sin cookies/redirects; Meta también debe poder descargar los videos. Configurar URLs firmadas con duración suficiente para la cola, procesamiento y reintentos. No se siguen enlaces de carpetas ni páginas de login.
-6. Poner `META_MODE=live`, mantener inicialmente `ENABLE_LIVE_PUBLISH=false`, reiniciar y llamar `/v1/connection`. Verificar moneda, estado de cuenta y acceso de lectura. Ese resultado no certifica todos los permisos de escritura.
-7. Una vez autorizado el primer ensayo, habilitar `ENABLE_LIVE_PUBLISH=true`, reiniciar y publicar un borrador con `target_status=PAUSED`. Esto crea objetos reales aunque no haya entrega. Revisar en Ads Manager objetivo, puja, presupuesto, identidad, medios, copy, CTA, destino y URL tags.
-8. Para empezar a entregar, usar `/activate` o un nuevo borrador autorizado con `target_status=ACTIVE`. Consultar `/remote` y posteriormente `/insights`. Revisión, mínimos de presupuesto, restricciones y entrega dependen de Meta.
+| Tema | Estado |
+|---|---|
+| Versión | Marketing API **v26.0** es la vigente (publicada 29/07/2026). No se encontró v27. |
+| Cambios del 27/10/2026 | Aplican a todas las versiones. Afectan anuncios de encuesta, `applink_treatment=web_only` con destino web+app, categorías especiales y placements de Messenger Stories/Explore. **Ninguno toca los payloads de este módulo.** |
+| Campaña sin presupuesto de campaña | Meta exige `is_adset_budget_sharing_enabled` (error 100/4834011 si falta). Se envía `false`. |
+| Conjunto | Desde v23 Meta exige declarar `targeting_automation.advantage_audience`. **El ZIP original no lo enviaba**: ahora se envía 0 (respeta tu segmentación) o 1 si lo activás. |
+| Bid Cap | `bid_strategy=LOWEST_COST_WITH_BID_CAP` + `bid_amount` en el conjunto. Sin presupuesto de campaña, la campaña queda fuera de Advantage+ (advantage_state DISABLED). |
+| Identidad Instagram | `instagram_user_id` (reemplazó a `instagram_actor_id`). Descubrimiento: `act_…/connected_instagram_accounts`. |
+| Enlace visible | Imagen: `link_data.caption` (URL real del negocio; no se usa en Instagram). Video: `call_to_action.value.link_caption`. |
+| Validar escritura sin crear | `execution_options=["validate_only"]` devuelve `{"success":true}` sin crear el objeto. |
+| Acceso para tu propio negocio | Acceso estándar alcanza para cuentas propias; revisión de app y verificación del negocio se exigen para administrar cuentas de terceros. Confirmalo en el panel de tu app. |
+
+Fuentes en `docs/FUENTES.md`. Lo que solo se comprueba con tu cuenta real: permisos efectivos del token, mínimos de presupuesto/puja de tu moneda y aprobación de los anuncios.
+
+## Pasos (uno por vez)
+
+1. **Portfolio comercial.** En https://business.facebook.com/settings confirmá que tu portfolio tiene la cuenta publicitaria y la página. Resultado: los dos activos figuran en *Cuentas*.
+2. **App.** En https://developers.facebook.com/apps creá una app tipo *Business* (o usá una existente), vinculada a ese portfolio, y agregá el producto *Marketing API*. Resultado: el ID de la app (no es secreto).
+3. **Usuario del sistema.** En *Configuración del negocio → Usuarios → Usuarios del sistema* creá uno *Administrador* y asignale: cuenta publicitaria (*Administrar campañas*), página (*Crear anuncios*) y píxel. Resultado: los tres activos asignados.
+4. **Token.** En ese usuario del sistema: *Generar token* para tu app con `ads_management` y `ads_read`. Para listar páginas por nombre sumá `pages_show_list` y `pages_read_engagement`; `business_management` si querés descubrir activos del portfolio. Elegí vencimiento y anotá cuándo rotarlo. **No lo pegues en el chat.**
+5. **Guardarlo en el servidor.** Cargalo como secreto `META_ACCESS_TOKEN` en el gestor de secretos del hosting de Orbita (o en el campo administrativo seguro de Orbita). `META_APP_SECRET` (en *Configuración básica* de la app) habilita `appsecret_proof`. Nunca en Git, navegador, logs ni SQLite.
+6. **Comprobar.** Con `META_MODE=live` y `ENABLE_LIVE_PUBLISH=false`, ejecutar `POST /v1/setup/verify` y `GET /v1/setup/assets?account_id=act_…`. Resultado esperado: `read_verified: true` (cuenta, moneda, página, píxel con nombres) y `write_validated: true`.
+7. **Ensayo real pausado.** Con tus datos de prueba definidos, `ENABLE_LIVE_PUBLISH=true` y un borrador `target_status=PAUSED`. Revisar en Ads Manager y con `/remote` y `/previews`. Queda pausado: activar es una instrucción aparte, con gasto.
+
+## Lectura vs. publicación
+
+- `read_verified`: el token lee cuenta (activa, moneda correcta), página, píxel e Instagram configurados.
+- `write_validated`: Meta aceptó una creación de campaña en modo `validate_only`. Prueba el permiso de escritura en la cuenta, sin crear nada.
+- Creatividades con tu página y anuncios completos: solo los prueba el **ensayo real pausado**.
 
 ## Token y vigencia
 
-El módulo usa un token aprovisionado fuera del servicio. **No implementa OAuth, login de Meta, intercambio/renovación de tokens ni selección automática de activos.** Su expiración/revocación debe monitorearse y el secreto rotarse por la infraestructura del negocio; el servicio lee el secreto al iniciar. No se supone que ningún token sea inmortal. Si Orbita ya administra OAuth, integrar su mecanismo seguro en el cliente Meta y conservar los controles de acceso.
+El servicio lee el token al iniciar. No implementa intercambio ni renovación: si vence o se revoca, `/v1/setup/verify` lo muestra en `checks.token`; se genera otro (paso 4) y se reinicia el servicio. No hace falta contraseña de Facebook ni sesión de navegador. GitHub no otorga permisos sobre Meta.
 
-No hace falta proporcionar una contraseña de Facebook ni una sesión de navegador. GitHub no sustituye este permiso. No se creó una app Meta ni se solicitó revisión de permisos por vos.
+## Límites del perfil
 
-## Lo que puede requerir adaptación real
-
-Algunas cuentas, mercados y objetivos requieren información adicional, validaciones o configuración publicitaria. El perfil actual solo representa ventas web con PURCHASE o tráfico a web, segmentación adulta básica y categorías especiales vacías. No usar este perfil para crédito, empleo, vivienda, política u otras categorías especiales/reguladas. Si el negocio requiere una de ellas, Claude debe ampliar el modelo, campos y pruebas antes de publicar esa campaña.
-
-Un rechazo de Meta no se resuelve quitando silenciosamente el bid cap, cambiando el objetivo o mostrando un éxito falso. El código expone el error y conserva lo creado para que pueda corregirse o revisarse.
+Ventas web con PURCHASE o tráfico a web, segmentación adulta por países, sin categorías especiales. Para crédito, empleo, vivienda, política u otras categorías reguladas hay que ampliar el modelo y las pruebas antes de publicar. Un rechazo de Meta no se “arregla” quitando el bid cap o cambiando el objetivo: se muestra el error y se conserva lo creado.

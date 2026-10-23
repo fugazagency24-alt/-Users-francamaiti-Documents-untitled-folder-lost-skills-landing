@@ -78,7 +78,7 @@ class BackendTests(unittest.TestCase):
         self.assertNotIn("utm_content", c["object_story_spec"]["link_data"]["link"])
 
     def test_display_and_utm_reject_bad_values(self):
-        for shared in [{"display_url_mode": "HIDDEN"}, {"utm_template": "?a=b"},
+        for shared in [{"display_url_mode": "HIDDEN"}, {"utm_template": "a=b#frag"},
                        {"utm_template": "a=b&a=c"}, {"utm_template": "a={{made.up}}"},
                        {"utm_template": "origen=duplicado"},
                        {"display_url_mode": "CUSTOM", "display_url": "https://otro.example"}]:

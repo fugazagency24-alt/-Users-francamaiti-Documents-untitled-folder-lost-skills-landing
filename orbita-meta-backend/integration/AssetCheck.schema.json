@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "maxLength": 4096,
+      "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video",
+        "thumbnail"
+      ]
+    }
+  },
+  "required": [
+    "url",
+    "kind"
+  ]
+}

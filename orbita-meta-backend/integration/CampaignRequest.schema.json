@@ -32,7 +32,8 @@
             "type": "string",
             "format": "uri",
             "pattern": "^https://",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
           },
           "image_hash": {
             "type": "string"
@@ -45,7 +46,8 @@
             "type": "string",
             "format": "uri",
             "pattern": "^https://",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
           },
           "overrides": {
             "type": "object",
@@ -82,7 +84,8 @@
                 "type": "string",
                 "format": "uri",
                 "pattern": "^https://",
-                "maxLength": 4096
+                "maxLength": 4096,
+                "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
               },
               "display_url_mode": {
                 "type": "string",
@@ -90,7 +93,8 @@
                   "AUTO",
                   "CUSTOM",
                   "OMIT_CUSTOM"
-                ]
+                ],
+                "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
               },
               "display_url": {
                 "type": "string",
@@ -99,7 +103,7 @@
               "utm_template": {
                 "type": "string",
                 "maxLength": 2000,
-                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
               }
             },
             "required": []
@@ -108,7 +112,7 @@
         "required": [
           "kind"
         ],
-        "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id, más thumbnail_url JPG/PNG. Reglas cruzadas validadas por backend."
+        "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id; thumbnail_url JPG/PNG opcional (sin ella se usa la portada que genera Meta). url es el ARCHIVO publicitario directo, no la landing. Reglas cruzadas validadas por backend."
       },
       "minItems": 1,
       "maxItems": 50
@@ -148,7 +152,8 @@
           "type": "string",
           "format": "uri",
           "pattern": "^https://",
-          "maxLength": 4096
+          "maxLength": 4096,
+          "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
         },
         "display_url_mode": {
           "type": "string",
@@ -156,7 +161,8 @@
             "AUTO",
             "CUSTOM",
             "OMIT_CUSTOM"
-          ]
+          ],
+          "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
         },
         "display_url": {
           "type": "string",
@@ -165,7 +171,7 @@
         "utm_template": {
           "type": "string",
           "maxLength": 2000,
-          "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+          "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
         }
       },
       "required": []

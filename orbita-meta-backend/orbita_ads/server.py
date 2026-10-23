@@ -2,8 +2,9 @@ import hmac
 import json
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 from . import validation as v
+from . import __version__
 from .planner import plan
 
 
@@ -18,7 +19,7 @@ def json_object(pairs):
 
 def make_server(service, host=None, port=None):
     class Handler(BaseHTTPRequestHandler):
-        server_version = "OrbitaPublisher/1.0"
+        server_version = "OrbitaPublisher/1.1"
         sys_version = ""
 
         def setup(self):
@@ -52,25 +53,45 @@ def make_server(service, host=None, port=None):
         def dispatch(self):
             path = urlsplit(self.path).path
             if self.command == "GET" and path == "/health":
-                return 200, {"ok": True, "mode": service.c.mode, "version": "1.0.0"}
+                return 200, {"ok": True, "mode": service.c.mode, "version": __version__}
             if self.headers.get("Origin"):
                 raise v.Problem("Servicio interno: llamar desde el backend de Orbita", 403)
             if not hmac.compare_digest(self.headers.get("Authorization", ""), "Bearer " + service.c.api_key):
                 raise v.Problem("No autorizado", 401)
             method = self.command
+            query = parse_qs(urlsplit(self.path).query)
+            def arg(name, default=None):
+                return query.get(name, [default])[0]
+            def limit():
+                raw = arg("limit", "50")
+                v.require(raw.isdigit() and 1 <= int(raw) <= 200, "limit: 1 a 200")
+                return int(raw)
             if path == "/v1/profile":
                 if method == "GET":
                     return 200, service.store.profile()
                 if method == "PUT":
                     return 200, service.store.save_profile(v.profile(self.body()))
+            if method == "PUT" and path == "/v1/profile/defaults":
+                return 200, service.update_defaults(self.body())
             if method == "GET" and path == "/v1/connection":
                 return 200, service.connection()
+            if method == "POST" and path == "/v1/setup/verify":
+                v.obj(self.body(), set())
+                return 200, service.verify_setup()
+            if method == "GET" and path == "/v1/setup/assets":
+                return 200, service.discover(arg("account_id"))
+            if method == "POST" and path == "/v1/assets/check":
+                return 200, service.check_asset(self.body())
+            if method == "GET" and path == "/v1/jobs":
+                return 200, service.list_jobs(limit())
+            if method == "GET" and path == "/v1/drafts":
+                return 200, {"drafts": service.store.list_drafts(limit())}
             if method == "POST" and path == "/v1/preview":
                 return 200, plan(self.body(), service.store.profile())
             if method == "POST" and path == "/v1/drafts":
-                return 201, service.draft(self.body())
+                return 201, service.draft(self.body(), self.headers.get("Idempotency-Key"))
             if method == "POST" and path == "/v1/drafts/from-link":
-                return 201, service.from_link(self.body())
+                return 201, service.from_link(self.body(), self.headers.get("Idempotency-Key"))
             m = re.fullmatch(r"/v1/drafts/([a-f0-9]{32})(/publish)?", path)
             if m:
                 if method == "GET" and not m[2]:
@@ -83,7 +104,7 @@ def make_server(service, host=None, port=None):
                 if method == "GET" and not action:
                     return 200, service.store.job(ident)
                 if method == "GET" and action in ("remote", "insights", "previews"):
-                    return 200, service.remote(ident, "status" if action == "remote" else action)
+                    return 200, service.remote(ident, "status" if action == "remote" else action, arg("format", "DESKTOP_FEED_STANDARD"))
                 if method == "POST" and action == "pause":
                     v.obj(self.body(), set())
                     return 202, service.pause(ident)

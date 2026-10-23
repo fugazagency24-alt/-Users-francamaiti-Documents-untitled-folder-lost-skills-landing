@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Orbita Meta Publisher",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "API interna mononegocio. Respuestas flexibles; reglas semánticas en validation.py y docs/API.md."
   },
   "servers": [
@@ -88,30 +88,9 @@
         }
       }
     },
-    "/v1/connection": {
-      "get": {
-        "operationId": "connection",
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "Respuesta JSON",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error JSON {error:{code,message}}"
-          }
-        }
-      }
-    },
-    "/v1/preview": {
-      "post": {
-        "operationId": "preview",
+    "/v1/profile/defaults": {
+      "put": {
+        "operationId": "saveDefaults",
         "description": "",
         "responses": {
           "200": {
@@ -133,6 +112,184 @@
           "content": {
             "application/json": {
               "schema": {
+                "$ref": "#/components/schemas/CopyFields"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connection": {
+      "get": {
+        "operationId": "connection",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      }
+    },
+    "/v1/setup/verify": {
+      "post": {
+        "operationId": "verifySetup",
+        "description": "Lectura de activos y validate_only de escritura; no crea objetos.",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      }
+    },
+    "/v1/setup/assets": {
+      "get": {
+        "operationId": "discoverAssets",
+        "description": "Query opcional account_id=act_... para píxeles, páginas promocionables e Instagram.",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      }
+    },
+    "/v1/assets/check": {
+      "post": {
+        "operationId": "checkAsset",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCheck"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs": {
+      "get": {
+        "operationId": "listJobs",
+        "description": "Query limit 1-200.",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      }
+    },
+    "/v1/drafts": {
+      "get": {
+        "operationId": "listDrafts",
+        "description": "Query limit 1-200.",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      },
+      "post": {
+        "operationId": "draft",
+        "description": "",
+        "responses": {
+          "201": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Misma clave y mismo contenido devuelven el mismo borrador."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
                 "$ref": "#/components/schemas/CampaignRequest"
               }
             }
@@ -140,12 +297,12 @@
         }
       }
     },
-    "/v1/drafts": {
+    "/v1/preview": {
       "post": {
-        "operationId": "draft",
+        "operationId": "preview",
         "description": "",
         "responses": {
-          "201": {
+          "200": {
             "description": "Respuesta JSON",
             "content": {
               "application/json": {
@@ -190,6 +347,19 @@
             "description": "Error JSON {error:{code,message}}"
           }
         },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Misma clave y mismo contenido devuelven el mismo borrador."
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -604,7 +774,8 @@
                   "type": "string",
                   "format": "uri",
                   "pattern": "^https://",
-                  "maxLength": 4096
+                  "maxLength": 4096,
+                  "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
                 },
                 "image_hash": {
                   "type": "string"
@@ -617,7 +788,8 @@
                   "type": "string",
                   "format": "uri",
                   "pattern": "^https://",
-                  "maxLength": 4096
+                  "maxLength": 4096,
+                  "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
                 },
                 "overrides": {
                   "type": "object",
@@ -654,7 +826,8 @@
                       "type": "string",
                       "format": "uri",
                       "pattern": "^https://",
-                      "maxLength": 4096
+                      "maxLength": 4096,
+                      "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
                     },
                     "display_url_mode": {
                       "type": "string",
@@ -662,7 +835,8 @@
                         "AUTO",
                         "CUSTOM",
                         "OMIT_CUSTOM"
-                      ]
+                      ],
+                      "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
                     },
                     "display_url": {
                       "type": "string",
@@ -671,7 +845,7 @@
                     "utm_template": {
                       "type": "string",
                       "maxLength": 2000,
-                      "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                      "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
                     }
                   },
                   "required": []
@@ -680,7 +854,7 @@
               "required": [
                 "kind"
               ],
-              "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id, más thumbnail_url JPG/PNG. Reglas cruzadas validadas por backend."
+              "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id; thumbnail_url JPG/PNG opcional (sin ella se usa la portada que genera Meta). url es el ARCHIVO publicitario directo, no la landing. Reglas cruzadas validadas por backend."
             },
             "minItems": 1,
             "maxItems": 50
@@ -720,7 +894,8 @@
                 "type": "string",
                 "format": "uri",
                 "pattern": "^https://",
-                "maxLength": 4096
+                "maxLength": 4096,
+                "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
               },
               "display_url_mode": {
                 "type": "string",
@@ -728,7 +903,8 @@
                   "AUTO",
                   "CUSTOM",
                   "OMIT_CUSTOM"
-                ]
+                ],
+                "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
               },
               "display_url": {
                 "type": "string",
@@ -737,7 +913,7 @@
               "utm_template": {
                 "type": "string",
                 "maxLength": 2000,
-                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
               }
             },
             "required": []
@@ -817,6 +993,10 @@
             "minimum": 18,
             "maximum": 65
           },
+          "advantage_audience": {
+            "type": "boolean",
+            "description": "Advantage+ audience de Meta. false respeta la segmentación configurada. true exige age_min 18-25 y age_max 65."
+          },
           "objective": {
             "type": "string",
             "enum": [
@@ -877,7 +1057,8 @@
                 "type": "string",
                 "format": "uri",
                 "pattern": "^https://",
-                "maxLength": 4096
+                "maxLength": 4096,
+                "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
               },
               "display_url_mode": {
                 "type": "string",
@@ -885,7 +1066,8 @@
                   "AUTO",
                   "CUSTOM",
                   "OMIT_CUSTOM"
-                ]
+                ],
+                "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
               },
               "display_url": {
                 "type": "string",
@@ -894,7 +1076,7 @@
               "utm_template": {
                 "type": "string",
                 "maxLength": 2000,
-                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
               }
             },
             "required": [
@@ -965,7 +1147,8 @@
                 "type": "string",
                 "format": "uri",
                 "pattern": "^https://",
-                "maxLength": 4096
+                "maxLength": 4096,
+                "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
               },
               "display_url_mode": {
                 "type": "string",
@@ -973,7 +1156,8 @@
                   "AUTO",
                   "CUSTOM",
                   "OMIT_CUSTOM"
-                ]
+                ],
+                "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
               },
               "display_url": {
                 "type": "string",
@@ -982,7 +1166,7 @@
               "utm_template": {
                 "type": "string",
                 "maxLength": 2000,
-                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
               }
             },
             "required": []
@@ -1010,7 +1194,8 @@
             "type": "string",
             "format": "uri",
             "pattern": "^https://",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
           },
           "source_type": {
             "type": "string",
@@ -1024,7 +1209,8 @@
             "type": "string",
             "format": "uri",
             "pattern": "^https://",
-            "maxLength": 4096
+            "maxLength": 4096,
+            "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
           }
         },
         "required": [
@@ -1044,6 +1230,90 @@
         },
         "required": [
           "plan_hash"
+        ]
+      },
+      "CopyFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "primary_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "headline": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "cta": {
+            "type": "string",
+            "enum": [
+              "LEARN_MORE",
+              "SHOP_NOW",
+              "SIGN_UP",
+              "BOOK_TRAVEL",
+              "CONTACT_US",
+              "DOWNLOAD",
+              "GET_QUOTE",
+              "SUBSCRIBE",
+              "APPLY_NOW"
+            ]
+          },
+          "destination_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 4096,
+            "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
+          },
+          "display_url_mode": {
+            "type": "string",
+            "enum": [
+              "AUTO",
+              "CUSTOM",
+              "OMIT_CUSTOM"
+            ],
+            "description": "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
+          },
+          "display_url": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "utm_template": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Parámetros UTM. Se acepta ? inicial o macros codificadas; se normalizan. Macros Meta se mantienen literales."
+          }
+        },
+        "required": []
+      },
+      "AssetCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 4096,
+            "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "thumbnail"
+            ]
+          }
+        },
+        "required": [
+          "url",
+          "kind"
         ]
       },
       "Resolve": {
