@@ -784,12 +784,20 @@
                   "type": "string",
                   "pattern": "^[0-9]+$"
                 },
+                "upload_id": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
                 "thumbnail_url": {
                   "type": "string",
                   "format": "uri",
                   "pattern": "^https://",
                   "maxLength": 4096,
                   "description": "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
+                },
+                "thumbnail_upload_id": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
                 },
                 "overrides": {
                   "type": "object",
@@ -854,7 +862,7 @@
               "required": [
                 "kind"
               ],
-              "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id; thumbnail_url JPG/PNG opcional (sin ella se usa la portada que genera Meta). url es el ARCHIVO publicitario directo, no la landing. Reglas cruzadas validadas por backend."
+              "description": "Imagen: exactamente url, image_hash o upload_id (archivo subido a Orbita). Video: exactamente url, video_id o upload_id; portada opcional thumbnail_url o thumbnail_upload_id (sin ella se usa la portada que genera Meta). url es el ARCHIVO publicitario directo, no la landing. Reglas cruzadas validadas por backend."
             },
             "minItems": 1,
             "maxItems": 50

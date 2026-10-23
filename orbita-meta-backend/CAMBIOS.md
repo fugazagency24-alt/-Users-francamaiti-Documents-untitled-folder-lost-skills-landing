@@ -1,4 +1,19 @@
-# Cambios sobre el ZIP (v1.0 → v1.1)
+# Cambios
+
+## v1.2 · app local
+
+| Qué | Detalle |
+|---|---|
+| Pantalla Ejecución → Meta Ads | Servida por el mismo proceso en `127.0.0.1`. Pestañas Publicar, Campañas, Conexión y Asistente IA. Sesión por cookie HttpOnly SameSite=Strict, control de Host (anti DNS rebinding) y de Origin (anti CSRF), CSP estricta. |
+| Claves en el servidor | Token de Meta, app secret y API key de Anthropic se cargan en un campo seguro, se guardan en `~/.orbita-meta-ads/secrets.json` (0600) y nunca vuelven al navegador. |
+| Modo desde la pantalla | Simulación / real y habilitar publicación real, persistidos. Sin token no se publica en real. |
+| Subida de archivos | JPG/PNG (hasta 30 MB) y MP4/MOV (hasta 4 GB), identificados por contenido. Imágenes se suben por bytes; videos por subida por partes a la cuenta. |
+| Medios reintentables | Una subida de medio sin confirmar ya no bloquea el trabajo: reintentar solo puede dejar una copia en la biblioteca, nunca campañas duplicadas. |
+| Asistente IA | Claude (`claude-opus-5-5`) con loop de herramientas propio: las mismas funciones del servicio y permisos aplicados en el backend (`ORBITA_AI_PERMISSIONS`). Conversación guardada sin reescribir. |
+| Montos en formato argentino | «1.000» = mil, «1.000,50», «1000,5» y «1000.5» se interpretan bien. |
+| Iniciador | `iniciar.command`: busca Python 3.10+, ofrece instalarlo si falta, crea el entorno y abre el navegador. |
+
+## v1.1 · auditoría del ZIP
 
 | # | Problema en el ZIP | Corrección |
 |---|---|---|

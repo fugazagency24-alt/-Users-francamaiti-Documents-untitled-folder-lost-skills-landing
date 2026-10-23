@@ -1,5 +1,7 @@
 # Orbita · Publicador de campañas Meta
 
+> **Uso local (v1.2):** doble clic en `iniciar.command` y se abre la pantalla **Ejecución → Meta Ads**. Ver `INICIO.md`.
+
 Este ZIP contiene un backend ejecutable, sin interfaz gráfica, para integrar en tu Orbita existente. Incluye conexión real por Marketing API, simulador local, contratos de API, adaptadores para la IA, ejemplos y un prompt completo para Claude.
 
 **Para entregárselo a Claude:** adjuntá este ZIP, dale acceso al código de Orbita y pegá el contenido de `PROMPT_PARA_CLAUDE.md`. No pegues tus tokens en el chat: se configuran como secretos del servidor.

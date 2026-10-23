@@ -173,16 +173,20 @@ def request(raw, p):
         require("bid_cap_minor" not in r, "ABO usa LOWEST_COST_WITHOUT_CAP; no acepta bid_cap_minor")
     shared = copy_fields(r.get("shared", {}))
     for m in r["media"]:
-        obj(m, {"kind", "url", "image_hash", "video_id", "thumbnail_url", "overrides"}, ("kind",))
+        obj(m, {"kind", "url", "image_hash", "video_id", "upload_id", "thumbnail_url", "thumbnail_upload_id", "overrides"}, ("kind",))
         require(m["kind"] in ("image", "video"), "kind: image o video")
+        for k in ("upload_id", "thumbnail_upload_id"):
+            if k in m:
+                require(isinstance(m[k], str) and bool(re.fullmatch(r"[a-f0-9]{32}", m[k])), f"{k} inválido")
         if m["kind"] == "image":
-            require(("url" in m) != ("image_hash" in m), "Imagen: url o image_hash, exactamente uno")
-            require(not ({"video_id", "thumbnail_url"} & set(m)), "Imagen: campos de video no válidos")
+            require(sum(k in m for k in ("url", "image_hash", "upload_id")) == 1, "Imagen: url, image_hash o upload_id, exactamente uno")
+            require(not ({"video_id", "thumbnail_url", "thumbnail_upload_id"} & set(m)), "Imagen: campos de video no válidos")
             if "image_hash" in m:
                 require(isinstance(m["image_hash"], str) and bool(re.fullmatch(r"[A-Za-z0-9_-]{1,128}", m["image_hash"])), "image_hash inválido")
         else:
-            require(("url" in m) != ("video_id" in m), "Video: url o video_id, exactamente uno")
+            require(sum(k in m for k in ("url", "video_id", "upload_id")) == 1, "Video: url, video_id o upload_id, exactamente uno")
             require("image_hash" not in m, "Video: image_hash no válido")
+            require(not ("thumbnail_url" in m and "thumbnail_upload_id" in m), "Video: una sola portada")
             # Sin portada propia se usa la miniatura preferida que Meta genera al procesar el video.
             if "thumbnail_url" in m:
                 https(m["thumbnail_url"], "thumbnail_url")

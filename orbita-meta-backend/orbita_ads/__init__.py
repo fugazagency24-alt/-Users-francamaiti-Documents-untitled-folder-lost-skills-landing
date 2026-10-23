@@ -1,2 +1,2 @@
-"""Orbita Meta Publisher: backend interno, sin interfaz gráfica."""
-__version__ = "1.1.0"
+"""Orbita Meta Publisher: backend y pantalla local de Meta Ads."""
+__version__ = "1.2.0"

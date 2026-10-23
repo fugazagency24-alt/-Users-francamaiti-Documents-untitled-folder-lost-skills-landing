@@ -39,13 +39,17 @@ def plan(raw, raw_profile):
         elif "video_id" in m:
             add(k, "existing", "", {"id": m["video_id"]})
         elif m["kind"] == "image":
-            add(k, "image", f"{account}/adimages", {"url": m["url"]})
+            add(k, "image", f"{account}/adimages", {"upload_id": m["upload_id"]} if "upload_id" in m else {"url": m["url"]})
+        elif "upload_id" in m:
+            add(k, "video_file", f"{account}/advideos", {"upload_id": m["upload_id"], "name": f"{r['name']} {i+1}"})
         else:
             add(k, "video", f"{account}/advideos", {"file_url": m["url"], "name": f"{r['name']} {i+1}"})
         if m["kind"] == "video":
             add(f"ready{i}", "video_ready", ref(k), {})
             if "thumbnail_url" in m:
                 add(f"thumb{i}", "image", f"{account}/adimages", {"url": m["thumbnail_url"]})
+            elif "thumbnail_upload_id" in m:
+                add(f"thumb{i}", "image", f"{account}/adimages", {"upload_id": m["thumbnail_upload_id"]})
             else:
                 add(f"thumb{i}", "video_thumbnail", ref(k), {})
     groups = [list(range(10))] if r["structure"] == "BID_CAP_1_1_10" else [[i] for i in range(len(r["media"]))]
@@ -84,7 +88,8 @@ def plan(raw, raw_profile):
             else:
                 if shown:
                     cta["value"]["link_caption"] = shown
-                cover = {"image_hash": ref(f"thumb{i}", "hash")} if "thumbnail_url" in m else {"image_url": ref(f"thumb{i}", "url")}
+                own_cover = "thumbnail_url" in m or "thumbnail_upload_id" in m
+                cover = {"image_hash": ref(f"thumb{i}", "hash")} if own_cover else {"image_url": ref(f"thumb{i}", "url")}
                 story["video_data"] = {"video_id": ref(f"media{i}"), **cover,
                                        "message": c["primary_text"], "title": c["headline"],
                                        "link_description": c["description"], "call_to_action": cta}
@@ -99,7 +104,7 @@ def plan(raw, raw_profile):
                           "total_daily_budget_minor": len(groups) * r["daily_budget_minor"],
                           "bid_strategy": "LOWEST_COST_WITH_BID_CAP" if r["structure"] == "BID_CAP_1_1_10" else "LOWEST_COST_WITHOUT_CAP",
                           "bid_cap_minor": r.get("bid_cap_minor"), "target_status": r["target_status"],
-                          "videos_with_meta_thumbnail": sum(1 for m in r["media"] if m["kind"] == "video" and "thumbnail_url" not in m)},
+                          "videos_with_meta_thumbnail": sum(1 for m in r["media"] if m["kind"] == "video" and not {"thumbnail_url", "thumbnail_upload_id"} & set(m))},
               "warnings": ["El presupuesto diario agregado corresponde solo a este lote: no limita el gasto de otras campañas existentes.",
                            "El presupuesto diario de Meta no es un límite estricto de gasto por día.",
                            "El enlace visible no garantiza ocultar el dominio; Meta decide la presentación por ubicación y no lo usa en Instagram.",

@@ -1,10 +1,17 @@
 # API de integración
 
-Base local: `http://127.0.0.1:8787`. Todas las rutas salvo `/health` requieren `Authorization: Bearer ORBITA_SERVICE_KEY`. Llamar desde backend, no desde navegador: se rechazan solicitudes con Origin. JSON de hasta 256 KiB, sin campos desconocidos. Contrato: `integration/openapi.json`; esquemas `*.schema.json`. Las reglas entre campos se implementan en `validation.py`.
+Base local: `http://127.0.0.1:8787`. Dos formas de autenticarse: `Authorization: Bearer ORBITA_SERVICE_KEY` desde un backend (con Origin se rechaza), o la sesión de la pantalla local (cookie + Host local + Origin propio en cambios). JSON de hasta 256 KiB, sin campos desconocidos. Contrato: `integration/openapi.json`; esquemas `*.schema.json`. Las reglas entre campos se implementan en `validation.py`.
 
 | Método / ruta | Función |
 |---|---|
 | GET /health | Salud del proceso y modo; no verifica Meta. |
+| GET / | Pantalla local (solo Host 127.0.0.1/localhost). Entrega la cookie de sesión de la pantalla. |
+| GET /v1/settings · PUT /v1/settings/runtime | Modo (`mock`/`live`), publicación real habilitada y estado de claves (solo si están cargadas). |
+| PUT /v1/secrets/{meta_access_token\|meta_app_secret\|anthropic_api_key} · DELETE | Guardar o borrar una clave en el servidor. La respuesta nunca la incluye. |
+| POST /v1/uploads | Cuerpo binario + `X-File-Name`. Devuelve `id` para usar como `upload_id` / `thumbnail_upload_id`. |
+| GET /v1/uploads/{id}[/file] | Metadatos o el archivo (para la vista de la pantalla). |
+| POST /v1/assistant/messages | `{conversation_id?, text}` → respuesta del asistente y acciones ejecutadas. |
+| GET /v1/assistant/conversations/{id} | Mensajes visibles de una conversación. |
 | GET /v1/profile | Configuración guardada, sin secretos. |
 | PUT /v1/profile | Reemplazar perfil completo. Solo configuración administrativa. |
 | PUT /v1/profile/defaults | Guardar solo defaults de anuncio (copy, CTA, destino, enlace visible, UTM). No toca cuenta, presupuesto ni puja. |

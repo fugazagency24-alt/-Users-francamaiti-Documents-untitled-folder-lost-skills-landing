@@ -26,6 +26,12 @@ class Store:
               PRIMARY KEY(job_id,key));
             CREATE TABLE IF NOT EXISTS events (
               seq INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL, at REAL NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS uploads (
+              id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, format TEXT NOT NULL, size INTEGER NOT NULL,
+              width INTEGER, height INTEGER, path TEXT NOT NULL, sha256 TEXT NOT NULL, created REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS assistant_messages (
+              conversation TEXT NOT NULL, seq INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, visible TEXT,
+              at REAL NOT NULL, PRIMARY KEY(conversation, seq));
             """)
             # Migración v2: una pausa manual retiene la activación automática hasta un /activate explícito.
             if "hold_paused" not in {r[1] for r in db.execute("PRAGMA table_info(jobs)")}:
@@ -187,3 +193,38 @@ class Store:
                               "ORDER BY d.created DESC LIMIT ?", (limit,)).fetchall()
         return [{"draft_id": r["id"], "created": r["created"], "job_id": r["job_id"], "job_state": r["state"],
                  "plan_hash": json.loads(r["plan"])["plan_hash"], "summary": json.loads(r["plan"])["summary"]} for r in rows]
+
+    def runtime(self):
+        with self.db() as db:
+            r = db.execute("SELECT value FROM settings WHERE key='runtime'").fetchone()
+        return json.loads(r[0]) if r else {}
+
+    def save_runtime(self, value):
+        with self.db() as db:
+            db.execute("INSERT INTO settings VALUES ('runtime',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (canonical(value),))
+
+    def add_upload(self, row):
+        with self.db() as db:
+            db.execute("INSERT INTO uploads(id,name,kind,format,size,width,height,path,sha256,created) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                       (row["id"], row["name"], row["kind"], row["format"], row["size"], row.get("width"), row.get("height"),
+                        row["path"], row["sha256"], time.time()))
+        return self.upload(row["id"])
+
+    def upload(self, ident):
+        with self.db() as db:
+            r = db.execute("SELECT * FROM uploads WHERE id=?", (ident,)).fetchone()
+        if not r:
+            raise Problem("Archivo subido no encontrado", 404)
+        return dict(r)
+
+    def append_message(self, conversation, role, content, visible=None):
+        with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            seq = db.execute("SELECT COALESCE(MAX(seq),-1)+1 FROM assistant_messages WHERE conversation=?", (conversation,)).fetchone()[0]
+            db.execute("INSERT INTO assistant_messages VALUES (?,?,?,?,?,?)",
+                       (conversation, seq, role, json.dumps(content, ensure_ascii=False), visible, time.time()))
+
+    def messages(self, conversation):
+        with self.db() as db:
+            rows = db.execute("SELECT role,content,visible,at FROM assistant_messages WHERE conversation=? ORDER BY seq", (conversation,)).fetchall()
+        return [{"role": r["role"], "content": json.loads(r["content"]), "visible": r["visible"], "at": r["at"]} for r in rows]

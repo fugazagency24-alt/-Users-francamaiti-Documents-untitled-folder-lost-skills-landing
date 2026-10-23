@@ -1,10 +1,16 @@
 import base64
+import hashlib
+import os
 import re
 import threading
 import time
+import uuid
+from dataclasses import replace
+from pathlib import Path
 from . import assets, validation as v
 from .meta import MetaClient, MockMeta, MetaError
 from .planner import plan
+from .runtime import Secrets
 from .store import Store
 
 
@@ -31,16 +37,90 @@ def resolve(value, results):
 
 
 class Service:
-    def __init__(self, config, client=None):
-        self.c = config
+    def __init__(self, config, client=None, secrets=None):
+        self.base, self.injected = config, client
+        self.secrets = secrets or Secrets(Path(config.db_path).parent / "secrets.json")
         self.store = Store(config.db_path)
-        self.meta = client or (MockMeta() if config.mode == "mock" else MetaClient(config))
+        self.uploads_dir = Path(config.db_path).parent / "uploads"
         self.execution_lock = threading.Lock()
         self.stop = threading.Event()
+        self._assistant = None
+        self.apply_runtime()
+
+    def assistant(self):
+        if self._assistant is None:
+            from .assistant import Assistant
+            self._assistant = Assistant(self)
+        return self._assistant
+
+    def apply_runtime(self):
+        """Modo y credenciales vigentes: variables de entorno como base, cambios de la pantalla guardados en el servidor."""
+        rt = self.store.runtime()
+        self.c = replace(self.base, mode=rt.get("mode", self.base.mode), live_enabled=rt.get("live_enabled", self.base.live_enabled),
+                         meta_token=self.secrets.get("meta_access_token") or self.base.meta_token,
+                         meta_app_secret=self.secrets.get("meta_app_secret") or self.base.meta_app_secret)
+        self.meta = self.injected or (MockMeta() if self.c.mode == "mock" else MetaClient(self.c))
+
+    def settings(self):
+        return {"mode": self.c.mode, "live_enabled": self.c.live_enabled, "graph_version": self.c.graph_version,
+                "asset_hosts": list(self.c.asset_hosts), "secrets": self.secrets.status()}
+
+    def set_runtime(self, body):
+        v.obj(body, {"mode", "live_enabled"})
+        current = {"mode": self.c.mode, "live_enabled": self.c.live_enabled, **body}
+        v.require(current["mode"] in ("mock", "live"), "mode: mock o live")
+        v.require(type(current["live_enabled"]) is bool, "live_enabled: true o false")
+        with self.execution_lock:
+            self.store.save_runtime(current)
+            self.apply_runtime()
+        return self.settings()
+
+    def set_secret(self, name, body):
+        v.obj(body, {"value"}, ("value",))
+        with self.execution_lock:
+            self.secrets.set(name, body["value"])
+            self.apply_runtime()
+        return self.settings()
+
+    def clear_secret(self, name):
+        with self.execution_lock:
+            self.secrets.clear(name)
+            self.apply_runtime()
+        return self.settings()
+
+    def save_upload(self, tmp_path, name):
+        """Archivo subido desde la pantalla: se identifica por su contenido real, no por la extensión."""
+        tmp_path = Path(tmp_path)
+        try:
+            with open(tmp_path, "rb") as f:
+                head = f.read(64)
+            kind, fmt = assets.sniff(head)
+            size = tmp_path.stat().st_size
+            v.require(size <= (30 if kind == "image" else 4096) * 1024 * 1024,
+                      "Imagen: máximo 30 MB. Video: máximo 4 GB")
+            width = height = None
+            if kind == "image":
+                _, width, height = assets.image_size(tmp_path.read_bytes())
+            digest = hashlib.sha256()
+            with open(tmp_path, "rb") as f:
+                for block in iter(lambda: f.read(1024 * 1024), b""):
+                    digest.update(block)
+            ident = uuid.uuid4().hex
+            self.uploads_dir.mkdir(parents=True, exist_ok=True)
+            final = self.uploads_dir / f"{ident}.{fmt.lower()}"
+            os.replace(tmp_path, final)
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        safe_name = re.sub(r"[^\w .()\-]", "_", name)[:120] or "archivo"
+        return self.store.add_upload({"id": ident, "name": safe_name, "kind": kind, "format": fmt, "size": size,
+                                      "width": width, "height": height, "path": str(final), "sha256": digest.hexdigest()})
 
     def live_guard(self):
         if self.c.mode == "live" and not self.c.live_enabled:
-            raise v.Problem("Habilitá ENABLE_LIVE_PUBLISH=true después de configurar Meta", 409, "LIVE_DISABLED")
+            raise v.Problem("La publicación real está deshabilitada: activala en Conexión cuando la verificación esté OK", 409, "LIVE_DISABLED")
+        if self.c.mode == "live" and not self.c.meta_token:
+            raise v.Problem("Falta el token de Meta: cargalo en Conexión", 409, "META_TOKEN_MISSING")
 
     def connection(self, p=None):
         p = p or self.store.profile()
@@ -61,7 +141,12 @@ class Service:
     def draft(self, body, idem=None):
         if idem:
             v.text(idem, "Idempotency-Key", 128)
-        return self.store.draft(plan(body, self.store.profile()), idem)
+        result = plan(body, self.store.profile())
+        for m in result["request"]["media"]:
+            for key, kind in (("upload_id", m["kind"]), ("thumbnail_upload_id", "image")):
+                if key in m:
+                    v.require(self.store.upload(m[key])["kind"] == kind, f"{key}: el archivo subido no es {kind}")
+        return self.store.draft(result, idem)
 
     def from_link(self, body, idem=None):
         v.obj(body, {"source_url", "source_type", "name", "structure", "thumbnail_url", "shared", "daily_budget_minor", "bid_cap_minor", "target_status"}, ("source_url", "source_type"))
@@ -105,9 +190,16 @@ class Service:
         body, path = resolve(op["body"], results), resolve(op["path"], results)
         # Download before the IN_FLIGHT marker: failures here never create remote objects.
         try:
-            if kind == "image":
+            if kind == "image" and "upload_id" in body:
+                data = Path(self.store.upload(body["upload_id"])["path"]).read_bytes()
+                v.require(assets.sniff(data[:64])[0] == "image", "El archivo subido no es JPG/PNG")
+                body = {"bytes": base64.b64encode(data).decode()}
+            elif kind == "image":
                 data = assets.fetch(body["url"], self.c.asset_hosts) if self.c.mode == "live" else body["url"].encode()
                 body = {"bytes": base64.b64encode(data).decode()}
+            if kind == "video_file":
+                upload = self.store.upload(body["upload_id"])
+                v.require(Path(upload["path"]).exists(), "El archivo de video subido ya no está en el servidor")
             if kind == "video" and self.c.mode == "live":
                 assets.probe(body["file_url"], self.c.asset_hosts, "video")
             if "name" in body:
@@ -141,17 +233,28 @@ class Service:
             self.store.step(ident, key, "DONE", result)
             return result
         self.store.step(ident, key, "IN_FLIGHT")
+        # Subir un medio solo agrega un archivo a la biblioteca de la cuenta: reintentarlo no crea campañas ni gasto
+        # (las imágenes se identifican por contenido). Por eso un resultado incierto acá no bloquea el trabajo.
+        media = kind in ("image", "video", "video_file")
         try:
-            response = self.meta.call("POST", path, body)
+            if kind == "video_file":
+                response = self.meta.upload_video(path.split("/")[0], self.store.upload(body["upload_id"])["path"], body["name"])
+            else:
+                response = self.meta.call("POST", path, body)
             if kind == "image":
                 result = {"hash": next(iter(response["images"].values()))["hash"]}
             else:
                 result = {"id": str(response["id"])}
                 v.ident(result["id"], "Meta id")
         except MetaError as e:
-            self.store.step(ident, key, "UNCERTAIN" if e.ambiguous else "FAILED", error=str(e))
+            self.store.step(ident, key, "UNCERTAIN" if e.ambiguous and not media else "FAILED", error=str(e))
+            if media and e.ambiguous:
+                raise MetaError(e.meta_code, e.meta_subcode, ambiguous=False, detail="subida de medio sin confirmar; reintentar es seguro")
             raise
         except Exception:
+            if media:
+                self.store.step(ident, key, "FAILED", error="Subida de medio sin confirmar; reintentar es seguro")
+                raise MetaError("INCOMPLETE_UPLOAD_RESPONSE")
             self.store.step(ident, key, "UNCERTAIN", error="Respuesta de creación incompleta; verificar objeto remoto")
             raise MetaError("INCOMPLETE_CREATE_RESPONSE", ambiguous=True)
         self.store.step(ident, key, "DONE", result)

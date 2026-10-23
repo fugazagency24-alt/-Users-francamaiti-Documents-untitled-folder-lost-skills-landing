@@ -14,6 +14,7 @@ class Config:
     asset_hosts: tuple[str, ...] = ()
     live_enabled: bool = False
     meta_use_env_proxy: bool = False
+    video_host: str = "graph-video.facebook.com"
     host: str = "127.0.0.1"
     port: int = 8787
 
@@ -29,6 +30,7 @@ class Config:
             asset_hosts=tuple(x.strip().lower() for x in os.getenv("ASSET_ALLOWED_HOSTS", "").split(",") if x.strip()),
             live_enabled=os.getenv("ENABLE_LIVE_PUBLISH", "false").lower() == "true",
             meta_use_env_proxy=os.getenv("META_USE_ENV_PROXY", "false").lower() == "true",
+            video_host=os.getenv("META_VIDEO_HOST", "graph-video.facebook.com"),
             host=os.getenv("HOST", "127.0.0.1"),
             port=int(os.getenv("PORT", "8787")),
         )
@@ -40,6 +42,6 @@ class Config:
             raise ValueError("Versión Graph inválida")
         if "*" in c.asset_hosts and len(c.asset_hosts) > 1:
             raise ValueError("ASSET_ALLOWED_HOSTS: usá * solo o una lista de hosts exactos")
-        if c.mode == "live" and not c.meta_token:
-            raise ValueError("Falta META_ACCESS_TOKEN")
+        if c.video_host not in ("graph-video.facebook.com", "graph.facebook.com"):
+            raise ValueError("META_VIDEO_HOST: graph-video.facebook.com o graph.facebook.com")
         return c

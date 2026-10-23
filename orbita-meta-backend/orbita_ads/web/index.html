@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbita · Meta Ads</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/styles.css">
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><img src="/static/icon.svg" alt="" width="22" height="22"> Orbita</div>
+    <nav aria-label="Secciones">
+      <div class="nav-group">
+        <div class="nav-label">Ejecución</div>
+        <a href="#meta-ads" class="nav-item active" aria-current="page" data-nav="meta-ads">Meta Ads</a>
+      </div>
+    </nav>
+    <div class="sidebar-foot" id="foot">Local · 127.0.0.1</div>
+  </aside>
+  <main>
+    <header class="top">
+      <div>
+        <div class="crumbs">Ejecución / <strong>Meta Ads</strong></div>
+        <h1>Meta Ads</h1>
+      </div>
+      <div class="mode" id="mode-badge" title="Modo de publicación"></div>
+    </header>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="publicar" aria-selected="true">Publicar</button>
+      <button role="tab" data-tab="campanas" aria-selected="false">Campañas</button>
+      <button role="tab" data-tab="conexion" aria-selected="false">Conexión</button>
+      <button role="tab" data-tab="asistente" aria-selected="false">Asistente IA</button>
+    </div>
+    <div id="banner" class="banner" hidden></div>
+    <section id="tab-publicar" class="tab" role="tabpanel"></section>
+    <section id="tab-campanas" class="tab" role="tabpanel" hidden></section>
+    <section id="tab-conexion" class="tab" role="tabpanel" hidden></section>
+    <section id="tab-asistente" class="tab" role="tabpanel" hidden></section>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

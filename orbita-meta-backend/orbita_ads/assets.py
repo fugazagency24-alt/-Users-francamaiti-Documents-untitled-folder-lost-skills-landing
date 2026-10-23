@@ -128,3 +128,14 @@ def probe(url, hosts, kind):
         raise Problem("No se reconoce como video (MP4/MOV/WEBM/AVI)", 422, "ASSET_FORMAT")
     return {"ok": True, "kind": "video", "format": fmt,
             "note": "Meta descarga el video desde este enlace: debe seguir accesible hasta que termine el procesamiento."}
+
+
+def sniff(head):
+    """Tipo real por los primeros bytes. Solo formatos que Meta acepta y que este módulo sabe subir."""
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image", "PNG"
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image", "JPG"
+    if head[4:8] == b"ftyp":
+        return "video", "MOV" if head[8:10] == b"qt" else "MP4"
+    raise Problem("Formato no admitido: imágenes JPG/PNG o videos MP4/MOV", 415, "UPLOAD_FORMAT")

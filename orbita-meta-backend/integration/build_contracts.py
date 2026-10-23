@@ -23,8 +23,8 @@ copy_fields = obj({
 copy_fields["properties"]["display_url_mode"]["description"] = "AUTO: dominio limpio del destino. CUSTOM: display_url del mismo dominio. OMIT_CUSTOM: no se envía; Meta decide. Ninguno garantiza ocultar el dominio."
 copy_fields["properties"]["destination_url"]["description"] = "Landing a la que lleva el anuncio. No es el archivo del creativo. Sin los mismos parámetros que el UTM."
 media = obj({"kind": enum("image","video"), "url": url, "image_hash": string(), "video_id": string(pattern="^[0-9]+$"),
-             "thumbnail_url": url, "overrides": copy_fields}, ["kind"])
-media["description"] = "Imagen: exactamente url o image_hash. Video: exactamente url o video_id; thumbnail_url JPG/PNG opcional (sin ella se usa la portada que genera Meta). url es el ARCHIVO publicitario directo, no la landing. Reglas cruzadas validadas por backend."
+             "upload_id": id32, "thumbnail_url": url, "thumbnail_upload_id": id32, "overrides": copy_fields}, ["kind"])
+media["description"] = "Imagen: exactamente url, image_hash o upload_id (archivo subido a Orbita). Video: exactamente url, video_id o upload_id; portada opcional thumbnail_url o thumbnail_upload_id (sin ella se usa la portada que genera Meta). url es el ARCHIVO publicitario directo, no la landing. Reglas cruzadas validadas por backend."
 request = obj({"name": string(minLength=1,maxLength=100), "structure": enum("BID_CAP_1_1_10","ABO_1_1_1"),
     "media": {"type":"array","items":media,"minItems":1,"maxItems":50}, "shared":copy_fields,
     "daily_budget_minor":money,"bid_cap_minor":money,"target_status":enum("PAUSED","ACTIVE")}, ["name","structure","media"])
@@ -64,7 +64,9 @@ tools = [
     ("orbita_campaign_insights","Lee métricas de hoy, en la zona horaria de la cuenta. No optimiza ni modifica campañas.",obj({"job_id":id32},["job_id"])),
     ("orbita_save_ad_defaults","Guarda como predeterminados copy, CTA, destino, enlace visible o UTM, solo si el usuario lo pidió. No cambia cuenta, presupuesto ni puja.",obj({"defaults":copy_fields},["defaults"])),
 ]
-(root/'integration/claude-tools.json').write_text(json.dumps([{"name":n,"description":d,"input_schema":s} for n,d,s in tools],ensure_ascii=False,indent=2)+'\n')
+tool_json = json.dumps([{"name":n,"description":d,"input_schema":s} for n,d,s in tools],ensure_ascii=False,indent=2)+'\n'
+(root/'integration/claude-tools.json').write_text(tool_json)
+(root/'orbita_ads/tools.json').write_text(tool_json)  # la misma definición para el asistente local
 
 paths = {}
 def route(path,method,operation,schema=None,status=200,description=""):
