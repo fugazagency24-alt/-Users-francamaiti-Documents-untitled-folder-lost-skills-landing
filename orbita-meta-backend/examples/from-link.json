@@ -1,0 +1,6 @@
+{
+  "source_url": "https://cdn.example/anuncio.jpg",
+  "source_type": "image",
+  "name": "Mi campaña",
+  "target_status": "PAUSED"
+}

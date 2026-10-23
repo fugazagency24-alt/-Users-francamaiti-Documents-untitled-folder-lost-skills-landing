@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "step_key": {
+      "type": "string"
+    },
+    "resolution": {
+      "type": "string",
+      "enum": [
+        "ATTACH",
+        "NOT_CREATED"
+      ]
+    },
+    "remote_id": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "step_key",
+    "resolution",
+    "evidence"
+  ]
+}

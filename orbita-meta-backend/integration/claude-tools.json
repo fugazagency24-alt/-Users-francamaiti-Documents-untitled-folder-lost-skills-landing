@@ -1,0 +1,467 @@
+[
+  {
+    "name": "orbita_connection",
+    "description": "Verifica la conexión configurada y moneda; mock no es conexión real.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "orbita_prepare_campaign",
+    "description": "Prepara un borrador inmutable de campañas sin publicarlas en Meta.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "structure": {
+              "type": "string",
+              "enum": [
+                "BID_CAP_1_1_10",
+                "ABO_1_1_1"
+              ]
+            },
+            "media": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "image",
+                      "video"
+                    ]
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://",
+                    "maxLength": 4096
+                  },
+                  "image_hash": {
+                    "type": "string"
+                  },
+                  "video_id": {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  "thumbnail_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "pattern": "^https://",
+                    "maxLength": 4096
+                  },
+                  "overrides": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "primary_text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 5000
+                      },
+                      "headline": {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      "cta": {
+                        "type": "string",
+                        "enum": [
+                          "LEARN_MORE",
+                          "SHOP_NOW",
+                          "SIGN_UP",
+                          "BOOK_TRAVEL",
+                          "CONTACT_US",
+                          "DOWNLOAD",
+                          "GET_QUOTE",
+                          "SUBSCRIBE",
+                          "APPLY_NOW"
+                        ]
+                      },
+                      "destination_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "pattern": "^https://",
+                        "maxLength": 4096
+                      },
+                      "display_url_mode": {
+                        "type": "string",
+                        "enum": [
+                          "AUTO",
+                          "CUSTOM",
+                          "OMIT_CUSTOM"
+                        ]
+                      },
+                      "display_url": {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      "utm_template": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                      }
+                    },
+                    "required": []
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id, más thumbnail_url JPG/PNG. Reglas cruzadas validadas por backend."
+              },
+              "minItems": 1,
+              "maxItems": 50
+            },
+            "shared": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 5000
+                },
+                "headline": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "cta": {
+                  "type": "string",
+                  "enum": [
+                    "LEARN_MORE",
+                    "SHOP_NOW",
+                    "SIGN_UP",
+                    "BOOK_TRAVEL",
+                    "CONTACT_US",
+                    "DOWNLOAD",
+                    "GET_QUOTE",
+                    "SUBSCRIBE",
+                    "APPLY_NOW"
+                  ]
+                },
+                "destination_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 4096
+                },
+                "display_url_mode": {
+                  "type": "string",
+                  "enum": [
+                    "AUTO",
+                    "CUSTOM",
+                    "OMIT_CUSTOM"
+                  ]
+                },
+                "display_url": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "utm_template": {
+                  "type": "string",
+                  "maxLength": 2000,
+                  "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                }
+              },
+              "required": []
+            },
+            "daily_budget_minor": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000,
+              "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+            },
+            "bid_cap_minor": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000,
+              "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+            },
+            "target_status": {
+              "type": "string",
+              "enum": [
+                "PAUSED",
+                "ACTIVE"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "structure",
+            "media"
+          ],
+          "description": "Bid Cap exige exactamente 10 creativos. ABO crea una campaña por creativo. Defaults del perfil; nunca inventar presupuestos."
+        }
+      },
+      "required": [
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "orbita_prepare_from_link",
+    "description": "Prepara desde un enlace directo de archivo o manifiesto. No abre páginas ni carpetas privadas.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "structure": {
+              "type": "string",
+              "enum": [
+                "BID_CAP_1_1_10",
+                "ABO_1_1_1"
+              ]
+            },
+            "shared": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 5000
+                },
+                "headline": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "cta": {
+                  "type": "string",
+                  "enum": [
+                    "LEARN_MORE",
+                    "SHOP_NOW",
+                    "SIGN_UP",
+                    "BOOK_TRAVEL",
+                    "CONTACT_US",
+                    "DOWNLOAD",
+                    "GET_QUOTE",
+                    "SUBSCRIBE",
+                    "APPLY_NOW"
+                  ]
+                },
+                "destination_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 4096
+                },
+                "display_url_mode": {
+                  "type": "string",
+                  "enum": [
+                    "AUTO",
+                    "CUSTOM",
+                    "OMIT_CUSTOM"
+                  ]
+                },
+                "display_url": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "utm_template": {
+                  "type": "string",
+                  "maxLength": 2000,
+                  "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                }
+              },
+              "required": []
+            },
+            "daily_budget_minor": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000,
+              "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+            },
+            "bid_cap_minor": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000000,
+              "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+            },
+            "target_status": {
+              "type": "string",
+              "enum": [
+                "PAUSED",
+                "ACTIVE"
+              ]
+            },
+            "source_url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 4096
+            },
+            "source_type": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "manifest"
+              ]
+            },
+            "thumbnail_url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 4096
+            }
+          },
+          "required": [
+            "source_url",
+            "source_type"
+          ],
+          "description": "Imagen/video: requiere name; video requiere thumbnail_url. Manifest: SOLO source_url y source_type; su JSON contiene CampaignRequest."
+        }
+      },
+      "required": [
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "orbita_publish_campaign",
+    "description": "Crea la estructura del borrador en Meta. Puede activar/gastar si target_status=ACTIVE. Requiere instrucción del usuario o autorización vigente para ese plan y presupuesto.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "draft_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "plan_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "draft_id",
+        "plan_hash"
+      ]
+    }
+  },
+  {
+    "name": "orbita_activate_campaign",
+    "description": "Activa una estructura ya creada. Puede comenzar a gastar; requiere autorización para el plan y presupuesto.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "plan_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "job_id",
+        "plan_hash"
+      ]
+    }
+  },
+  {
+    "name": "orbita_campaign_status",
+    "description": "Consulta progreso local; SIMULATED nunca significa publicado en Meta.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      },
+      "required": [
+        "job_id"
+      ]
+    }
+  },
+  {
+    "name": "orbita_campaign_remote",
+    "description": "Lee status/effective_status actuales de campañas, conjuntos y anuncios en Meta.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      },
+      "required": [
+        "job_id"
+      ]
+    }
+  },
+  {
+    "name": "orbita_pause_campaign",
+    "description": "Solicita pausar todas las campañas de este trabajo; verificar respuesta y estado remoto.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      },
+      "required": [
+        "job_id"
+      ]
+    }
+  },
+  {
+    "name": "orbita_campaign_insights",
+    "description": "Lee métricas de hoy, en la zona horaria de la cuenta. No optimiza ni modifica campañas.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      },
+      "required": [
+        "job_id"
+      ]
+    }
+  }
+]

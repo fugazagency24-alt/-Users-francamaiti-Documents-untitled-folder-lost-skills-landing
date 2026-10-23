@@ -1,0 +1,16 @@
+services:
+  publisher:
+    build: .
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      ORBITA_DB: /app/data/orbita.sqlite3
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - orbita-data:/app/data
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 90s
+volumes:
+  orbita-data:

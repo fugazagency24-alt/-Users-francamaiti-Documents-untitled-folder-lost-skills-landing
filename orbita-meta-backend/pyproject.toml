@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbita-meta-publisher"
+version = "1.0.0"
+description = "Backend interno de publicación de campañas Meta para Orbita"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["orbita_ads*"]

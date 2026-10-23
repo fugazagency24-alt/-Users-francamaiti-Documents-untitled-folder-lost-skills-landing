@@ -1,0 +1,12 @@
+{
+  "name": "Prueba",
+  "structure": "ABO_1_1_1",
+  "target_status": "PAUSED",
+  "media": [
+    {
+      "kind": "video",
+      "url": "https://cdn.example/video.mp4",
+      "thumbnail_url": "https://cdn.example/portada.jpg"
+    }
+  ]
+}

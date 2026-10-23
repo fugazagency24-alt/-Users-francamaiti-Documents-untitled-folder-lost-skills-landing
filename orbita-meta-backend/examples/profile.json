@@ -1,0 +1,23 @@
+{
+  "account_id": "act_123456",
+  "page_id": "234567",
+  "pixel_id": "345678",
+  "currency": "ARS",
+  "countries": [
+    "AR"
+  ],
+  "objective": "SALES",
+  "daily_budget_minor": 100000,
+  "max_batch_daily_budget_minor": 1000000,
+  "bid_cap_minor": 50000,
+  "defaults": {
+    "primary_text": "Conocé nuestro producto.",
+    "headline": "Conocé más",
+    "cta": "LEARN_MORE",
+    "destination_url": "https://tienda.example/producto?origen=orbita",
+    "utm_template": "utm_source={{site_source_name}}&utm_medium=paid_social&utm_campaign={{campaign.id}}&utm_content={{ad.id}}",
+    "description": "Información y detalles en nuestra web.",
+    "display_url_mode": "AUTO",
+    "display_url": ""
+  }
+}

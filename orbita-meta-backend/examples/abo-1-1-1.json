@@ -1,0 +1,19 @@
+{
+  "name": "Prueba",
+  "structure": "ABO_1_1_1",
+  "target_status": "PAUSED",
+  "media": [
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-0.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-1.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-2.jpg"
+    }
+  ]
+}

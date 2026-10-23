@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "structure": {
+      "type": "string",
+      "enum": [
+        "BID_CAP_1_1_10",
+        "ABO_1_1_1"
+      ]
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 4096
+          },
+          "image_hash": {
+            "type": "string"
+          },
+          "video_id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 4096
+          },
+          "overrides": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primary_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000
+              },
+              "headline": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "cta": {
+                "type": "string",
+                "enum": [
+                  "LEARN_MORE",
+                  "SHOP_NOW",
+                  "SIGN_UP",
+                  "BOOK_TRAVEL",
+                  "CONTACT_US",
+                  "DOWNLOAD",
+                  "GET_QUOTE",
+                  "SUBSCRIBE",
+                  "APPLY_NOW"
+                ]
+              },
+              "destination_url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://",
+                "maxLength": 4096
+              },
+              "display_url_mode": {
+                "type": "string",
+                "enum": [
+                  "AUTO",
+                  "CUSTOM",
+                  "OMIT_CUSTOM"
+                ]
+              },
+              "display_url": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "utm_template": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id, más thumbnail_url JPG/PNG. Reglas cruzadas validadas por backend."
+      },
+      "minItems": 1,
+      "maxItems": 50
+    },
+    "shared": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "headline": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "cta": {
+          "type": "string",
+          "enum": [
+            "LEARN_MORE",
+            "SHOP_NOW",
+            "SIGN_UP",
+            "BOOK_TRAVEL",
+            "CONTACT_US",
+            "DOWNLOAD",
+            "GET_QUOTE",
+            "SUBSCRIBE",
+            "APPLY_NOW"
+          ]
+        },
+        "destination_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 4096
+        },
+        "display_url_mode": {
+          "type": "string",
+          "enum": [
+            "AUTO",
+            "CUSTOM",
+            "OMIT_CUSTOM"
+          ]
+        },
+        "display_url": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "utm_template": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+        }
+      },
+      "required": []
+    },
+    "daily_budget_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000,
+      "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+    },
+    "bid_cap_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000,
+      "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+    },
+    "target_status": {
+      "type": "string",
+      "enum": [
+        "PAUSED",
+        "ACTIVE"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "structure",
+    "media"
+  ],
+  "description": "Bid Cap exige exactamente 10 creativos. ABO crea una campaña por creativo. Defaults del perfil; nunca inventar presupuestos."
+}

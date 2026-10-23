@@ -1,0 +1,47 @@
+{
+  "name": "Prueba",
+  "structure": "BID_CAP_1_1_10",
+  "target_status": "PAUSED",
+  "media": [
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-0.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-1.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-2.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-3.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-4.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-5.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-6.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-7.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-8.jpg"
+    },
+    {
+      "kind": "image",
+      "url": "https://cdn.example/ad-9.jpg"
+    }
+  ]
+}

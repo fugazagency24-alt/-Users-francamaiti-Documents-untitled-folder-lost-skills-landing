@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "account_id": {
+      "type": "string",
+      "pattern": "^act_[0-9]+$"
+    },
+    "page_id": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "pixel_id": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "instagram_user_id": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "ARS",
+        "USD",
+        "EUR",
+        "BRL"
+      ]
+    },
+    "countries": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$"
+      },
+      "minItems": 1,
+      "maxItems": 25
+    },
+    "age_min": {
+      "type": "integer",
+      "minimum": 18,
+      "maximum": 65
+    },
+    "age_max": {
+      "type": "integer",
+      "minimum": 18,
+      "maximum": 65
+    },
+    "objective": {
+      "type": "string",
+      "enum": [
+        "SALES",
+        "TRAFFIC"
+      ]
+    },
+    "daily_budget_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000,
+      "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+    },
+    "max_batch_daily_budget_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000,
+      "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+    },
+    "bid_cap_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000,
+      "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "headline": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "cta": {
+          "type": "string",
+          "enum": [
+            "LEARN_MORE",
+            "SHOP_NOW",
+            "SIGN_UP",
+            "BOOK_TRAVEL",
+            "CONTACT_US",
+            "DOWNLOAD",
+            "GET_QUOTE",
+            "SUBSCRIBE",
+            "APPLY_NOW"
+          ]
+        },
+        "destination_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "maxLength": 4096
+        },
+        "display_url_mode": {
+          "type": "string",
+          "enum": [
+            "AUTO",
+            "CUSTOM",
+            "OMIT_CUSTOM"
+          ]
+        },
+        "display_url": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "utm_template": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+        }
+      },
+      "required": [
+        "primary_text",
+        "destination_url"
+      ]
+    }
+  },
+  "required": [
+    "account_id",
+    "page_id",
+    "currency",
+    "countries",
+    "objective",
+    "daily_budget_minor",
+    "max_batch_daily_budget_minor",
+    "defaults"
+  ]
+}

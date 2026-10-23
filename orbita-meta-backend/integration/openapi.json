@@ -1,0 +1,1081 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Orbita Meta Publisher",
+    "version": "1.0.0",
+    "description": "API interna mononegocio. Respuestas flexibles; reglas semánticas en validation.py y docs/API.md."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8787"
+    }
+  ],
+  "security": [
+    {
+      "ServiceKey": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "security": []
+      }
+    },
+    "/v1/profile": {
+      "get": {
+        "operationId": "getProfile",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveProfile",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Profile"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connection": {
+      "get": {
+        "operationId": "connection",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        }
+      }
+    },
+    "/v1/preview": {
+      "post": {
+        "operationId": "preview",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/drafts": {
+      "post": {
+        "operationId": "draft",
+        "description": "",
+        "responses": {
+          "201": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/drafts/from-link": {
+      "post": {
+        "operationId": "fromLink",
+        "description": "",
+        "responses": {
+          "201": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FromLink"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/drafts/{draft_id}": {
+      "get": {
+        "operationId": "getDraft",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/drafts/{draft_id}/publish": {
+      "post": {
+        "operationId": "publishCampaign",
+        "description": "",
+        "responses": {
+          "202": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Publish"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "getJob",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/remote": {
+      "get": {
+        "operationId": "remote",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/insights": {
+      "get": {
+        "operationId": "insights",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/previews": {
+      "get": {
+        "operationId": "previews",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/pause": {
+      "post": {
+        "operationId": "pause",
+        "description": "",
+        "responses": {
+          "202": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/retry": {
+      "post": {
+        "operationId": "retry",
+        "description": "",
+        "responses": {
+          "202": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/activate": {
+      "post": {
+        "operationId": "activate",
+        "description": "",
+        "responses": {
+          "202": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Publish"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}/resolve": {
+      "post": {
+        "operationId": "resolve",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "Respuesta JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error JSON {error:{code,message}}"
+          }
+        },
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Resolve"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ServiceKey": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "CampaignRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "structure": {
+            "type": "string",
+            "enum": [
+              "BID_CAP_1_1_10",
+              "ABO_1_1_1"
+            ]
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "image",
+                    "video"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 4096
+                },
+                "image_hash": {
+                  "type": "string"
+                },
+                "video_id": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "thumbnail_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 4096
+                },
+                "overrides": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "primary_text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 5000
+                    },
+                    "headline": {
+                      "type": "string",
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 255
+                    },
+                    "cta": {
+                      "type": "string",
+                      "enum": [
+                        "LEARN_MORE",
+                        "SHOP_NOW",
+                        "SIGN_UP",
+                        "BOOK_TRAVEL",
+                        "CONTACT_US",
+                        "DOWNLOAD",
+                        "GET_QUOTE",
+                        "SUBSCRIBE",
+                        "APPLY_NOW"
+                      ]
+                    },
+                    "destination_url": {
+                      "type": "string",
+                      "format": "uri",
+                      "pattern": "^https://",
+                      "maxLength": 4096
+                    },
+                    "display_url_mode": {
+                      "type": "string",
+                      "enum": [
+                        "AUTO",
+                        "CUSTOM",
+                        "OMIT_CUSTOM"
+                      ]
+                    },
+                    "display_url": {
+                      "type": "string",
+                      "maxLength": 255
+                    },
+                    "utm_template": {
+                      "type": "string",
+                      "maxLength": 2000,
+                      "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+                    }
+                  },
+                  "required": []
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "description": "Imagen: exactamente url o image_hash. Video: exactamente url o video_id, más thumbnail_url JPG/PNG. Reglas cruzadas validadas por backend."
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "shared": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primary_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000
+              },
+              "headline": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "cta": {
+                "type": "string",
+                "enum": [
+                  "LEARN_MORE",
+                  "SHOP_NOW",
+                  "SIGN_UP",
+                  "BOOK_TRAVEL",
+                  "CONTACT_US",
+                  "DOWNLOAD",
+                  "GET_QUOTE",
+                  "SUBSCRIBE",
+                  "APPLY_NOW"
+                ]
+              },
+              "destination_url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://",
+                "maxLength": 4096
+              },
+              "display_url_mode": {
+                "type": "string",
+                "enum": [
+                  "AUTO",
+                  "CUSTOM",
+                  "OMIT_CUSTOM"
+                ]
+              },
+              "display_url": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "utm_template": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+              }
+            },
+            "required": []
+          },
+          "daily_budget_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "bid_cap_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "target_status": {
+            "type": "string",
+            "enum": [
+              "PAUSED",
+              "ACTIVE"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "structure",
+          "media"
+        ],
+        "description": "Bid Cap exige exactamente 10 creativos. ABO crea una campaña por creativo. Defaults del perfil; nunca inventar presupuestos."
+      },
+      "Profile": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "pattern": "^act_[0-9]+$"
+          },
+          "page_id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "pixel_id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "instagram_user_id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "ARS",
+              "USD",
+              "EUR",
+              "BRL"
+            ]
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            },
+            "minItems": 1,
+            "maxItems": 25
+          },
+          "age_min": {
+            "type": "integer",
+            "minimum": 18,
+            "maximum": 65
+          },
+          "age_max": {
+            "type": "integer",
+            "minimum": 18,
+            "maximum": 65
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "SALES",
+              "TRAFFIC"
+            ]
+          },
+          "daily_budget_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "max_batch_daily_budget_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "bid_cap_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "defaults": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primary_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000
+              },
+              "headline": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "cta": {
+                "type": "string",
+                "enum": [
+                  "LEARN_MORE",
+                  "SHOP_NOW",
+                  "SIGN_UP",
+                  "BOOK_TRAVEL",
+                  "CONTACT_US",
+                  "DOWNLOAD",
+                  "GET_QUOTE",
+                  "SUBSCRIBE",
+                  "APPLY_NOW"
+                ]
+              },
+              "destination_url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://",
+                "maxLength": 4096
+              },
+              "display_url_mode": {
+                "type": "string",
+                "enum": [
+                  "AUTO",
+                  "CUSTOM",
+                  "OMIT_CUSTOM"
+                ]
+              },
+              "display_url": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "utm_template": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+              }
+            },
+            "required": [
+              "primary_text",
+              "destination_url"
+            ]
+          }
+        },
+        "required": [
+          "account_id",
+          "page_id",
+          "currency",
+          "countries",
+          "objective",
+          "daily_budget_minor",
+          "max_batch_daily_budget_minor",
+          "defaults"
+        ]
+      },
+      "FromLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "structure": {
+            "type": "string",
+            "enum": [
+              "BID_CAP_1_1_10",
+              "ABO_1_1_1"
+            ]
+          },
+          "shared": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primary_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000
+              },
+              "headline": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "cta": {
+                "type": "string",
+                "enum": [
+                  "LEARN_MORE",
+                  "SHOP_NOW",
+                  "SIGN_UP",
+                  "BOOK_TRAVEL",
+                  "CONTACT_US",
+                  "DOWNLOAD",
+                  "GET_QUOTE",
+                  "SUBSCRIBE",
+                  "APPLY_NOW"
+                ]
+              },
+              "destination_url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://",
+                "maxLength": 4096
+              },
+              "display_url_mode": {
+                "type": "string",
+                "enum": [
+                  "AUTO",
+                  "CUSTOM",
+                  "OMIT_CUSTOM"
+                ]
+              },
+              "display_url": {
+                "type": "string",
+                "maxLength": 255
+              },
+              "utm_template": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Parámetros sin ? inicial. Macros Meta se mantienen literales."
+              }
+            },
+            "required": []
+          },
+          "daily_budget_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "bid_cap_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000,
+            "description": "Unidades menores enteras. ARS/USD/BRL/EUR: 100 = 1 unidad monetaria."
+          },
+          "target_status": {
+            "type": "string",
+            "enum": [
+              "PAUSED",
+              "ACTIVE"
+            ]
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 4096
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "manifest"
+            ]
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "source_url",
+          "source_type"
+        ],
+        "description": "Imagen/video: requiere name; video requiere thumbnail_url. Manifest: SOLO source_url y source_type; su JSON contiene CampaignRequest."
+      },
+      "Publish": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "plan_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "plan_hash"
+        ]
+      },
+      "Resolve": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "step_key": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "ATTACH",
+              "NOT_CREATED"
+            ]
+          },
+          "remote_id": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "step_key",
+          "resolution",
+          "evidence"
+        ]
+      }
+    }
+  }
+}
